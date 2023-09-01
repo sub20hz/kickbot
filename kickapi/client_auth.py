@@ -2,6 +2,7 @@ import cloudscraper
 import requests
 
 from requests.cookies import RequestsCookieJar
+from .selenium_help import get_cookies_and_tokens_via_selenium
 
 
 class AuthException(Exception):
@@ -21,18 +22,28 @@ class KickClient:
         self._login()
 
     def _login(self) -> None:
-        r = self._request_token_provider()
-        token_data = r.json()
-        self.cookies = r.cookies
-        self.xsrf = r.cookies['XSRF-TOKEN']
+        print("Logging user-bot in...")
+        try:
+            r = self._request_token_provider()
+            token_data = r.json()
+            self.cookies = r.cookies
+            self.xsrf = r.cookies['XSRF-TOKEN']
+
+        except (requests.exceptions.HTTPError, requests.exceptions.JSONDecodeError):
+            print("Cloudflare Block. Taking the harder way 😈 (headless selenium)...")
+            token_data, cookies = get_cookies_and_tokens_via_selenium()
+            print("Done retrieving data via selenium")
+            self.cookies = cookies
+            self.xsrf = cookies['XSRF-TOKEN']
+
         name_field_name = token_data.get('nameFieldName')
         token_field = token_data.get('validFromFieldName')
         login_token = token_data.get('encryptedValidFrom')
-        if name_field_name is None or token_field is None or login_token is None:
+        if any(value is None for value in [name_field_name, token_field, login_token]):
             raise AuthException("Error when parsing token fields while attempting login.")
 
+        print("Tokens parsed. Sending login post...")
         r2 = self._send_login_request(name_field_name, token_field, login_token)
-        self.cookies = r2.cookies
         login_data = r2.json()
         login_status = r2.status_code
         match login_status:
@@ -46,9 +57,9 @@ class KickClient:
             case 419:
                 raise AuthException("Csrf Error:", login_data)
             case 403:
-                raise AuthException("Cloudflare blocked (gay). Might need to set a proxy.")
+                raise AuthException("Cloudflare blocked (gay). Might need to set a proxy. Response:", login_data)
             case _:
-                raise AuthException(f"Unexpected Response. Status Code: {r2.status_code} | Response: {r2.json()}")
+                raise AuthException(f"Unexpected Response. Status Code: {login_status} | Response: {login_data}")
         print("Login Successful...")
         self._get_user_info()
 
@@ -61,15 +72,17 @@ class KickClient:
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Authorization": "Bearer " + self.auth_token,
+            "X-Xsrf-Token": self.xsrf,
             "Sec-Fetch-Site": "same-origin",
-            "User-Agent": 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0_3 like Mac OS X) '
-                          'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+
         }
         self.cookies['XSRF-TOKEN'] = self.xsrf
-        r = self._make_get_request(url, cookies=self.cookies, headers=headers)
-        if r.status_code != 200:
+        rs = self._make_get_request(url, cookies=self.cookies, headers=headers)
+        if rs.status_code != 200:
             raise AuthException("Error fetching user info.")
-        data = r.json()
+        data = rs.json()
         self.user_data = data
         self.user_id = data.get('id')
 
@@ -83,19 +96,21 @@ class KickClient:
             "Sec-Fetch-Mode": "cors",
             "Authorization": "Bearer " + self.auth_token,
             "Sec-Fetch-Site": "same-origin",
-            "User-Agent": 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0_3 like Mac OS X) '
-                          'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
         }
         payload = {
             'socket_id': socket_id,
             'channel_name': f'private-userfeed.{self.user_id}',
         }
-        r1 = self._make_post_request(url, payload=payload, cookies=self.cookies, headers=headers)
-        r1.raise_for_status()
-        socket_auth_token = r1.json().get('auth')
+        r = self._make_post_request(url, payload=payload, cookies=self.cookies, headers=headers)
+        if r.status_code != 200:
+            raise AuthException("Error retrieving socket auth token.")
+        socket_auth_token = r.json().get('auth')
         return socket_auth_token
 
     def _request_token_provider(self) -> requests.Response:
+        base = self._make_get_request('https://kick.com/')
         url = "https://kick.com/kick-token-provider"
         headers = {
             "authority": "kick.com",
@@ -109,11 +124,11 @@ class KickClient:
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin",
-            "User-Agent": 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0_3 like Mac OS X) '
-                          'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
 
         }
-        return self._make_get_request(url, cookies=self.cookies, headers=headers)
+        return self._make_get_request(url, cookies=base.cookies, headers=headers)
 
     def _send_login_request(self, name_field_name: str, token_field: str, login_token: str) -> requests.Response:
         url = 'https://kick.com/mobile/login'
@@ -125,8 +140,8 @@ class KickClient:
             "Sec-Fetch-Mode": "cors",
             "X-Xsrf-Token": self.xsrf,
             "Sec-Fetch-Site": "same-origin",
-            "User-Agent": 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0_3 like Mac OS X) '
-                          'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
         }
         payload = {
             name_field_name: '',

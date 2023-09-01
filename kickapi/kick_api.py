@@ -2,7 +2,7 @@ import asyncio
 import json
 import websockets
 
-from client_auth import KickClient
+from .client_auth import KickClient
 
 
 class KickApi:
