@@ -62,7 +62,6 @@ class KickClient:
         if any(value is None for value in [name_field_name, token_field, login_token]):
             raise KickAuthException("Error when parsing token fields while attempting login.")
 
-        print("Tokens parsed. Sending login post...")
         login_response = self._send_login_request(name_field_name, token_field, login_token)
         login_data = login_response.json()
         login_status = login_response.status_code

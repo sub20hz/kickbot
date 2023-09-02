@@ -1,4 +1,5 @@
 import json
+import requests
 
 from .constants import BASE_HEADERS
 from .kick_client import KickClient
@@ -20,15 +21,19 @@ class KickHelper:
         """
         url = f"https://kick.com/api/v1/channels/{streamer_name}"
         response = client.scraper.get(url, cookies=client.cookies, headers=BASE_HEADERS)
-        if response.status_code == 403 | response.status_code == 429:
-            raise KickHelperException("Error retrieving streamer info. Blocked By cloudflare.")
+        status = response.status_code
+        match status:
+            case 403 | 420:
+                raise KickHelperException(f"Error retrieving streamer info. Blocked By cloudflare. ({status})")
+            case 404:
+                raise KickHelperException(f"Streamer info for '{streamer_name}' not found. (404 error) ")
         try:
             return response.json()
         except json.JSONDecodeError:
-            raise KickHelperException("Error parsing streamer info json from response.")
+            raise KickHelperException(f"Error parsing streamer info json from response. Response: {response.text}")
 
     @staticmethod
-    def send_message_in_chat(bot, message: str) -> dict:
+    def send_message_in_chat(bot, message: str) -> requests.Response:
         """
         Send a message in a chatroom. Uses v1 API, was having csrf issues using v2 API (code 419).
 
