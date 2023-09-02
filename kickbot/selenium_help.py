@@ -8,6 +8,10 @@ from selenium.webdriver.common.by import By
 from requests.cookies import RequestsCookieJar, create_cookie
 
 
+class KickChromedriverException(Exception):
+    ...
+
+
 def get_cookies_and_tokens_via_selenium() -> tuple[dict, RequestsCookieJar]:
     driver = webdriver.Chrome(headless=True)
     print("Fetching kick.com...")
@@ -19,25 +23,26 @@ def get_cookies_and_tokens_via_selenium() -> tuple[dict, RequestsCookieJar]:
     print("Parsing body and cookies...")
     body_text = body_element.text
     cookies = driver.get_cookies()
+    driver.close()
     driver.quit()
     request_cookies = _cookie_jar_from_selenium(cookies)
     try:
         request_data = json.loads(body_text)
         return request_data, request_cookies
-    except Exception as e:
-        raise e
+    except json.JSONDecodeError:
+        raise KickChromedriverException("Error parsing response data/tokens from kick-token-provider")
 
 
 def _cookie_jar_from_selenium(cookies) -> RequestsCookieJar:
     request_cookies = requests.cookies.RequestsCookieJar()
-    for cookie in cookies:
+    for item in cookies:
         cookie_dict = {
-            'name': cookie['name'],
-            'value': cookie['value'],
-            'domain': cookie['domain'],
-            'path': cookie['path'],
-            'expires': cookie['expiry'],
-            'secure': cookie['secure']
+            'name': item['name'],
+            'value': item['value'],
+            'domain': item['domain'],
+            'path': item['path'],
+            'expires': item['expiry'],
+            'secure': item['secure']
         }
         new_cookie = create_cookie(**cookie_dict)
         request_cookies.set_cookie(new_cookie)

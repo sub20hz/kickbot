@@ -5,7 +5,7 @@ from requests.cookies import RequestsCookieJar
 from .selenium_help import get_cookies_and_tokens_via_selenium
 
 
-class AuthException(Exception):
+class KickAuthException(Exception):
     ...
 
 
@@ -30,7 +30,7 @@ class KickClient:
             self.xsrf = r.cookies['XSRF-TOKEN']
 
         except (requests.exceptions.HTTPError, requests.exceptions.JSONDecodeError):
-            print("Cloudflare Block. Taking the harder way 😈 (headless selenium)...")
+            print("Cloudflare Block. Getting tokens and cookies with chromedriver...")
             token_data, cookies = get_cookies_and_tokens_via_selenium()
             print("Done retrieving data via selenium")
             self.cookies = cookies
@@ -40,7 +40,7 @@ class KickClient:
         token_field = token_data.get('validFromFieldName')
         login_token = token_data.get('encryptedValidFrom')
         if any(value is None for value in [name_field_name, token_field, login_token]):
-            raise AuthException("Error when parsing token fields while attempting login.")
+            raise KickAuthException("Error when parsing token fields while attempting login.")
 
         print("Tokens parsed. Sending login post...")
         r2 = self._send_login_request(name_field_name, token_field, login_token)
@@ -51,15 +51,15 @@ class KickClient:
                 self.auth_token = login_data.get('token')
                 twofactor = login_data.get('2fa_required')
                 if twofactor:
-                    raise AuthException("Must disable 2-factor authentication on the bot account.")
+                    raise KickAuthException("Must disable 2-factor authentication on the bot account.")
             case 422:
-                raise AuthException("Login Failed:", login_data)
+                raise KickAuthException("Login Failed:", login_data)
             case 419:
-                raise AuthException("Csrf Error:", login_data)
+                raise KickAuthException("Csrf Error:", login_data)
             case 403:
-                raise AuthException("Cloudflare blocked (gay). Might need to set a proxy. Response:", login_data)
+                raise KickAuthException("Cloudflare blocked (gay). Might need to set a proxy. Response:", login_data)
             case _:
-                raise AuthException(f"Unexpected Response. Status Code: {login_status} | Response: {login_data}")
+                raise KickAuthException(f"Unexpected Response. Status Code: {login_status} | Response: {login_data}")
         print("Login Successful...")
         self._get_user_info()
 
@@ -79,14 +79,14 @@ class KickClient:
 
         }
         self.cookies['XSRF-TOKEN'] = self.xsrf
-        rs = self._make_get_request(url, cookies=self.cookies, headers=headers)
+        rs = self.scraper.get(url, cookies=self.cookies, headers=headers)
         if rs.status_code != 200:
-            raise AuthException("Error fetching user info.")
+            raise KickAuthException(f"Error fetching user info from {url}")
         data = rs.json()
         self.user_data = data
         self.user_id = data.get('id')
 
-    def get_socket_auth_token(self, socket_id: str) -> str:
+    def get_socket_auth_token(self, socket_id: str, channel_name: str) -> str:
         url = 'https://kick.com/broadcasting/auth'
         headers = {
             "Accept": "application/json, text/plain, */*",
@@ -101,16 +101,16 @@ class KickClient:
         }
         payload = {
             'socket_id': socket_id,
-            'channel_name': f'private-userfeed.{self.user_id}',
+            'channel_name': channel_name,
         }
-        r = self._make_post_request(url, payload=payload, cookies=self.cookies, headers=headers)
+        r = self.scraper.post(url, json=payload, cookies=self.cookies, headers=headers)
         if r.status_code != 200:
-            raise AuthException("Error retrieving socket auth token.")
+            raise KickAuthException(f"Error retrieving socket auth token from {url}")
         socket_auth_token = r.json().get('auth')
         return socket_auth_token
 
     def _request_token_provider(self) -> requests.Response:
-        base = self._make_get_request('https://kick.com/')
+        base_resp = self.scraper.get('https://kick.com/')
         url = "https://kick.com/kick-token-provider"
         headers = {
             "authority": "kick.com",
@@ -128,7 +128,7 @@ class KickClient:
                           "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
 
         }
-        return self._make_get_request(url, cookies=base.cookies, headers=headers)
+        return self.scraper.get(url, cookies=base_resp.cookies, headers=headers)
 
     def _send_login_request(self, name_field_name: str, token_field: str, login_token: str) -> requests.Response:
         url = 'https://kick.com/mobile/login'
@@ -150,19 +150,4 @@ class KickClient:
             "isMobileRequest": True,
             "password": self.password,
         }
-        return self._make_post_request(url, payload=payload, cookies=self.cookies, headers=headers)
-
-    def _make_get_request(self,
-                          url,
-                          cookies: RequestsCookieJar = None,
-                          headers: dict[str, str] = None) -> requests.Response:
-        r = self.scraper.get(url, cookies=cookies, headers=headers)
-        return r
-
-    def _make_post_request(self,
-                           url,
-                           payload: dict[str, str],
-                           cookies: RequestsCookieJar = None,
-                           headers: dict[str, str] = None) -> requests.Response:
-        r = self.scraper.post(url, json=payload, cookies=cookies, headers=headers)
-        return r
+        return self.scraper.post(url, json=payload, cookies=self.cookies, headers=headers)
