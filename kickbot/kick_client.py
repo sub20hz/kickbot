@@ -49,7 +49,6 @@ class KickClient:
 
         print("Tokens parsed. Sending login post...")
         login_response = self._send_login_request(name_field_name, token_field, login_token)
-        breakpoint()
         login_data = login_response.json()
         login_status = login_response.status_code
         match login_status:
@@ -85,7 +84,6 @@ class KickClient:
 
         }
         user_info_response = self.scraper.get(url, cookies=self.cookies, headers=headers)
-        breakpoint()
         if user_info_response.status_code != 200:
             raise KickAuthException(f"Error fetching user info from {url}")
         data = user_info_response.json()
@@ -110,13 +108,9 @@ class KickClient:
             'channel_name': channel_name,
         }
         auth_token_response = self.scraper.post(url, json=payload, cookies=self.cookies, headers=headers)
-        breakpoint()
         if auth_token_response.status_code != 200:
             raise KickAuthException(f"Error retrieving socket auth token from {url}")
         socket_auth_token = auth_token_response.json().get('auth')
-        cookie_refresh = self._request_token_provider()
-        breakpoint()
-        self.cookies = cookie_refresh.cookies
         return socket_auth_token
 
     def _request_token_provider(self) -> requests.Response:
@@ -137,8 +131,7 @@ class KickClient:
                           "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
 
         }
-        cookies = self.cookies if self.cookies is not None else None
-        return self.scraper.get(url, cookies=cookies, headers=headers)
+        return self.scraper.get(url, cookies=self.cookies, headers=headers)
 
     def _send_login_request(self, name_field_name: str, token_field: str, login_token: str) -> requests.Response:
         url = 'https://kick.com/mobile/login'
