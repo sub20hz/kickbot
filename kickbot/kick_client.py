@@ -3,6 +3,8 @@ import requests
 import tls_client
 
 from requests.cookies import RequestsCookieJar
+
+from .constants import BASE_HEADERS
 from .selenium_help import get_cookies_and_tokens_via_selenium
 
 
@@ -11,6 +13,9 @@ class KickAuthException(Exception):
 
 
 class KickClient:
+    """
+    Class mainly for authenticating user, and handling http requests using tls_client to bypass cloudflare
+    """
     def __init__(self, username: str, password: str) -> None:
         self.username: str = username
         self.password: str = password
@@ -27,6 +32,16 @@ class KickClient:
         self._login()
 
     def _login(self) -> None:
+        """
+        Main function to authenticate the user bot.
+
+        Attempts to retrieve tokens and cookie with self.scraper (tls-client),
+        but will user undetected_chromedriver in the case of it failing cloudflare (it normally doesn't).
+
+        In the case on it failing cloudflare, it will parse the tokens and cookies via chromedriver,
+        then send the login post with the scraper over http.
+        The cf_clearence cookie from chromedriver will bypass cloudflare blocking again.
+        """
         print("Logging user-bot in...")
         try:
             initial_token_response = self._request_token_provider()
@@ -69,20 +84,14 @@ class KickClient:
         self._get_user_info()
 
     def _get_user_info(self) -> None:
+        """
+        Retrieve user info after authenticating.
+        Sets self.user_data and self.user_id (data of the user bot)
+        """
         url = 'https://kick.com/api/v1/user'
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Authorization": "Bearer " + self.auth_token,
-            "X-Xsrf-Token": self.xsrf,
-            "Sec-Fetch-Site": "same-origin",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-
-        }
+        headers = BASE_HEADERS.copy()
+        headers['Authorization'] = "Bearer " + self.auth_token
+        headers['X-Xsrf-Token'] = self.xsrf
         user_info_response = self.scraper.get(url, cookies=self.cookies, headers=headers)
         if user_info_response.status_code != 200:
             raise KickAuthException(f"Error fetching user info from {url}")
@@ -91,18 +100,16 @@ class KickClient:
         self.user_id = data.get('id')
 
     def get_socket_auth_token(self, socket_id: str, channel_name: str) -> str:
+        """
+        Retrieve the socket auth token for the given channel and socket.
+
+        :param socket_id: Socket ID to authenticate in
+        :param channel_name: Channel name to join
+        :return: Socket auth token to authenticate in the socket
+        """
         url = 'https://kick.com/broadcasting/auth'
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Authorization": "Bearer " + self.auth_token,
-            "Sec-Fetch-Site": "same-origin",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-        }
+        headers = BASE_HEADERS.copy()
+        headers['Authorization'] = "Bearer " + self.auth_token
         payload = {
             'socket_id': socket_id,
             'channel_name': channel_name,
@@ -114,38 +121,29 @@ class KickClient:
         return socket_auth_token
 
     def _request_token_provider(self) -> requests.Response:
-        url = "https://kick.com/kick-token-provider"
-        headers = {
-            "authority": "kick.com",
-            "method": "GET",
-            "path": "/kick-token-provider",
-            "scheme": "https",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://kick.com/",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+        """
+         Request the token provider to retrieve some useful tokens, and cookies
 
-        }
+         :return: Response from the token provider request using the scraper (tls-client)
+         """
+        url = "https://kick.com/kick-token-provider"
+        headers = BASE_HEADERS.copy()
+        headers['Referer'] = "https://kick.com"
+        headers['path'] = "/kick-token-provider"
         return self.scraper.get(url, cookies=self.cookies, headers=headers)
 
     def _send_login_request(self, name_field_name: str, token_field: str, login_token: str) -> requests.Response:
+        """
+        Perform the login post request to the mobile login endpoint. On desktop, I get 2fa more, and a csrf error (419).
+
+        :param name_field_name: Token field received from _request_token_provider
+        :param token_field: Token field received from _request_token_provider
+        :param login_token: Token field received from _request_token_provider
+        :return: Login post request response
+        """
         url = 'https://kick.com/mobile/login'
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "X-Xsrf-Token": self.xsrf,
-            "Sec-Fetch-Site": "same-origin",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-        }
+        headers = BASE_HEADERS.copy()
+        headers['X-Xsrf-Token'] = self.xsrf
         payload = {
             name_field_name: '',
             token_field: login_token,
