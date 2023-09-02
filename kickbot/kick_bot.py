@@ -54,20 +54,14 @@ class KickBot:
 
         print(f"Disconnected from websocket {self.socket_id}")
 
-    # async def _send_ping(self):
-    #     while True:
-    #         await asyncio.sleep(115)
-    #         current_time = datetime.utcnow()
-    #         if current_time >= self._last_response + timedelta(seconds=115):
-    #             await self._send(ping_command)
-    #             print("Ping Sent.")
-
     def set_streamer(self, streamer_name: str) -> None:
+        if self.streamer_name is not None:
+            raise KickBotException("Streamer already set. Only able to set one streamer at a time.")
         self.streamer_name = streamer_name
         self.streamer_info = KickHelper.get_streamer_info(self.client, streamer_name)
         try:
             self._chatroom_info = self.streamer_info.get('chatroom')
-            self._chatroom_id = self._chatroom_info.get('channel_id')
+            self._chatroom_id = self._chatroom_info.get('id')
         except ValueError:
             raise KickBotException("Error retrieving streamer chatroom id.")
 
@@ -103,6 +97,7 @@ class KickBot:
                         }
         await self._send(auth_command)
         auth_response = await self._recv()
+        breakpoint()
         if auth_response.get('event') != 'pusher_internal:subscription_succeeded':
             raise SocketException("Error authenticating on socket.")
         print(f"Initial Auth Response: {auth_response}")

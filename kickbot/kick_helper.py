@@ -32,3 +32,7 @@ class KickHelper:
             return response.json()
         except json.JSONDecodeError:
             raise KickHelperException("Error parsing streamer info json from response.")
+
+    @staticmethod
+    def send_message_in_chat(client: KickClient, bot, message: str) -> dict:
+        ...

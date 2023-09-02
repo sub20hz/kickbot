@@ -1,5 +1,6 @@
 import cloudscraper
 import requests
+import tls_client
 
 from requests.cookies import RequestsCookieJar
 from .selenium_help import get_cookies_and_tokens_via_selenium
@@ -13,7 +14,11 @@ class KickClient:
     def __init__(self, username: str, password: str) -> None:
         self.username: str = username
         self.password: str = password
-        self.scraper = cloudscraper.create_scraper()
+        self.scraper = tls_client.Session(
+            client_identifier="chrome116",
+            random_tls_extension_order=True
+        )
+        # self.scraper = cloudscraper.create_scraper()
         self.xsrf: str | None = None
         self.cookies: RequestsCookieJar | None = None
         self.auth_token: str | None = None
@@ -24,10 +29,10 @@ class KickClient:
     def _login(self) -> None:
         print("Logging user-bot in...")
         try:
-            r = self._request_token_provider()
-            token_data = r.json()
-            self.cookies = r.cookies
-            self.xsrf = r.cookies['XSRF-TOKEN']
+            initial_token_response = self._request_token_provider()
+            token_data = initial_token_response.json()
+            self.cookies = initial_token_response.cookies
+            self.xsrf = initial_token_response.cookies['XSRF-TOKEN']
 
         except (requests.exceptions.HTTPError, requests.exceptions.JSONDecodeError):
             print("Cloudflare Block. Getting tokens and cookies with chromedriver...")
@@ -43,9 +48,10 @@ class KickClient:
             raise KickAuthException("Error when parsing token fields while attempting login.")
 
         print("Tokens parsed. Sending login post...")
-        r2 = self._send_login_request(name_field_name, token_field, login_token)
-        login_data = r2.json()
-        login_status = r2.status_code
+        login_response = self._send_login_request(name_field_name, token_field, login_token)
+        breakpoint()
+        login_data = login_response.json()
+        login_status = login_response.status_code
         match login_status:
             case 200:
                 self.auth_token = login_data.get('token')
@@ -78,11 +84,11 @@ class KickClient:
                           "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
 
         }
-        self.cookies['XSRF-TOKEN'] = self.xsrf
-        rs = self.scraper.get(url, cookies=self.cookies, headers=headers)
-        if rs.status_code != 200:
+        user_info_response = self.scraper.get(url, cookies=self.cookies, headers=headers)
+        breakpoint()
+        if user_info_response.status_code != 200:
             raise KickAuthException(f"Error fetching user info from {url}")
-        data = rs.json()
+        data = user_info_response.json()
         self.user_data = data
         self.user_id = data.get('id')
 
@@ -103,14 +109,17 @@ class KickClient:
             'socket_id': socket_id,
             'channel_name': channel_name,
         }
-        r = self.scraper.post(url, json=payload, cookies=self.cookies, headers=headers)
-        if r.status_code != 200:
+        auth_token_response = self.scraper.post(url, json=payload, cookies=self.cookies, headers=headers)
+        breakpoint()
+        if auth_token_response.status_code != 200:
             raise KickAuthException(f"Error retrieving socket auth token from {url}")
-        socket_auth_token = r.json().get('auth')
+        socket_auth_token = auth_token_response.json().get('auth')
+        cookie_refresh = self._request_token_provider()
+        breakpoint()
+        self.cookies = cookie_refresh.cookies
         return socket_auth_token
 
     def _request_token_provider(self) -> requests.Response:
-        base_resp = self.scraper.get('https://kick.com/')
         url = "https://kick.com/kick-token-provider"
         headers = {
             "authority": "kick.com",
@@ -128,7 +137,8 @@ class KickClient:
                           "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
 
         }
-        return self.scraper.get(url, cookies=base_resp.cookies, headers=headers)
+        cookies = self.cookies if self.cookies is not None else None
+        return self.scraper.get(url, cookies=cookies, headers=headers)
 
     def _send_login_request(self, name_field_name: str, token_field: str, login_token: str) -> requests.Response:
         url = 'https://kick.com/mobile/login'
