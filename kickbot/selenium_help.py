@@ -1,6 +1,6 @@
 """
-This isn't really used anymore, because tls_client rarely gets blocked by cloudflare.
-But in the case of a cloudflare block when requesting token provider, we will just retrieve to tokens and cookies
+This isn't really used anymore and could probably be removed, because tls_client rarely gets blocked by cloudflare.
+In the case of a cloudflare block when requesting token provider, we will just retrieve to tokens and cookies
 using undetected_chromedriver / selenium.
 """
 import json

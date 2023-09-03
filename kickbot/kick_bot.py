@@ -42,8 +42,8 @@ class KickBot:
         """
         Add a message to be handled, and the asynchronous function to handle that message.
 
-        Command handler will call the function if the first word matches
         Message handler will call the function if the entire message content matches
+        Command handler will call the function if the first word matches
 
         :param message: Message to be handled i.e: 'you are gay'
         :param message_function: Async function to handle the message
@@ -137,7 +137,7 @@ class KickBot:
 
     async def _handle_chat_message(self, inbound_message: dict) -> None:
         """
-        Handles incoming messages, checks if the message.content is in dict of handled commands
+        Handles incoming messages, checks if the message.content is in dict of handled commands / messages
 
         :param inbound_message: Raw inbound message from socket
         """
@@ -148,15 +148,15 @@ class KickBot:
 
         if content in self.handled_messages:
             message_func = self.handled_messages[content]
+            await message_func(self, message)
             logger.info(f"Handled Message: {content} from user {message.sender.username} ({message.sender.user_id}) | "
                         f"Called Function: {message_func}")
-            await message_func(self, message)
 
         elif command in self.handled_commands:
             command_func = self.handled_commands[command]
+            await command_func(self, message)
             logger.info(f"Handled Command: {command} from user {message.sender.username} ({message.sender.user_id}) | "
                         f"Called Function: {command_func}")
-            await command_func(self, message)
 
     async def _join_chatroom(self, chatroom_id: int) -> None:
         """

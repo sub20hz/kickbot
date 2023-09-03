@@ -48,6 +48,14 @@ class KickHelper:
 
     @staticmethod
     def send_reply_in_chat(bot, message: KickMessage, reply_message: str) -> requests.Response:
+        """
+        Reply to a users message.
+
+        :param bot: KickBot main bot (wasn't able to import class for type hint, would cause circular import)
+        :param message: Original message to reply
+        :param reply_message:  Reply message to be sent to the original message
+        :return: Response from sending the message post request
+        """
         url = f"https://kick.com/api/v2/messages/send/{bot.chatroom_id}"
         headers = BASE_HEADERS.copy()
         headers['X-Xsrf-Token'] = bot.client.xsrf
@@ -69,16 +77,22 @@ class KickHelper:
         return bot.client.scraper.post(url, json=payload, cookies=bot.client.cookies, headers=headers)
 
     @staticmethod
-    def message_from_data(response: dict) -> KickMessage:
-        data = response.get('data')
+    def message_from_data(message: dict) -> KickMessage:
+        """
+        Return a KickMessage object from the raw message data, containing message and sender attributes.
+
+        :param message: Inbound message from websocket
+        :return: KickMessage object with message and sender attributes
+        """
+        data = message.get('data')
         if data is None:
-            raise KickHelperException(f"Error parsing message data from response {response}")
+            raise KickHelperException(f"Error parsing message data from response {message}")
         return KickMessage(data)
 
     @staticmethod
     def get_ws_uri() -> str:
         """
-        This could probably be a constant somewhere else, but this makes it ease and easy to change.
+        This could probably be a constant somewhere else, but this makes it easy and easy to change.
         Also, they seem to always use the same wss, but in the case it needs to be dynamically found,
         having this function will make it easier.
 
