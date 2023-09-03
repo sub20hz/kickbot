@@ -9,6 +9,8 @@ with open("requirements.txt", "r") as f:
 setup(
     name="kickbot",
     version="0.0.3",
+    license="MIT",
+    python_requires=">=3.10",
     description="Package for developing kick.com bots",
     long_description=long_description,
     long_description_content_type="text/markdown",
