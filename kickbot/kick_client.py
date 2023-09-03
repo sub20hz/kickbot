@@ -1,15 +1,10 @@
-import cloudscraper
 import requests
 import tls_client
 
 from requests.cookies import RequestsCookieJar
 
-from .constants import BASE_HEADERS
+from .constants import BASE_HEADERS, KickAuthException
 from .selenium_help import get_cookies_and_tokens_via_selenium
-
-
-class KickAuthException(Exception):
-    ...
 
 
 class KickClient:
@@ -23,7 +18,6 @@ class KickClient:
             client_identifier="chrome116",
             random_tls_extension_order=True
         )
-        # self.scraper = cloudscraper.create_scraper()
         self.xsrf: str | None = None
         self.cookies: RequestsCookieJar | None = None
         self.auth_token: str | None = None
@@ -35,11 +29,11 @@ class KickClient:
         """
         Main function to authenticate the user bot.
 
-        Attempts to retrieve tokens and cookie with self.scraper (tls-client),
+        Attempts to retrieve tokens and cookies from /kick-token-provider with self.scraper (tls-client),
         but will user undetected_chromedriver in the case of it failing cloudflare (it normally doesn't).
 
         In the case on it failing cloudflare, it will parse the tokens and cookies via chromedriver,
-        then send the login post with the scraper over http.
+        then send the login post with the scraper over http with self.scraper (tls_client).
         The cf_clearence cookie from chromedriver will bypass cloudflare blocking again.
         """
         print("Logging user-bot in...")
@@ -97,27 +91,6 @@ class KickClient:
         data = user_info_response.json()
         self.user_data = data
         self.user_id = data.get('id')
-
-    def get_socket_auth_token(self, socket_id: str, channel_name: str) -> str:
-        """
-        Retrieve the socket auth token for the given channel and socket.
-
-        :param socket_id: Socket ID to authenticate in
-        :param channel_name: Channel name to join
-        :return: Socket auth token to authenticate in the socket
-        """
-        url = 'https://kick.com/broadcasting/auth'
-        headers = BASE_HEADERS.copy()
-        headers['Authorization'] = "Bearer " + self.auth_token
-        payload = {
-            'socket_id': socket_id,
-            'channel_name': channel_name,
-        }
-        auth_token_response = self.scraper.post(url, json=payload, cookies=self.cookies, headers=headers)
-        if auth_token_response.status_code != 200:
-            raise KickAuthException(f"Error retrieving socket auth token from {url}")
-        socket_auth_token = auth_token_response.json().get('auth')
-        return socket_auth_token
 
     def _request_token_provider(self) -> requests.Response:
         """

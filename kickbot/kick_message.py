@@ -8,6 +8,7 @@ class KickMessage:
         self.id: str | None = data.get('id')
         self.chatroom_id: int | None = data.get('chatroom_id')
         self.content: str | None = data.get('content')
+        self.args: list[str] | None = self.content.split()
         self.type: str | None = data.get('type')
         self.created_at: str | None = data.get('created_at')
         self.sender: _Sender | None = _Sender(data.get('sender'))

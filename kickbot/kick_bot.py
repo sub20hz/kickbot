@@ -4,13 +4,10 @@ import websockets
 
 from typing import Callable
 
+from .constants import KickBotException
 from .kick_client import KickClient
 from .kick_helper import KickHelper
-from .message import KickMessage
-
-
-class KickBotException(Exception):
-    ...
+from .kick_message import KickMessage
 
 
 class KickBot:
@@ -19,35 +16,55 @@ class KickBot:
     """
     def __init__(self, username: str, password: str) -> None:
         self.client: KickClient = KickClient(username, password)
-        self.ws_uri = self._get_ws_url()
-        self.ws_auth_token: str | None = None
-        self.userfeed_auth_token: str | None = None
-        self.chat_auth_token: str | None = None
-        self.socket_id: str | None = None
+        self._ws_uri = self._get_ws_url()
+        self._socket_id: str | None = None
         self.streamer_name: str | None = None
         self.streamer_info: dict | None = None
         self.chatroom_info: dict | None = None
         self.chatroom_id: int | None = None
         self.handled_commands: dict[str, Callable] = {}
+        self.handled_messages: dict[str, Callable] = {}
 
     def poll(self):
+        """
+        Main function to activate the bot polling.
+
+        """
         try:
             asyncio.run(self._poll())
         except KeyboardInterrupt:
             print("Bot stopped.")
             return
 
-    def add_command_handler(self, message: str, command_function: Callable) -> None:
+    def add_message_handler(self, message: str, message_function: Callable) -> None:
+        """
+        Add a message to be handled, and the asynchronous function to handle that message.
+
+        Command handler will call the function if the first word matches
+        Message handler will call the function if the entire message content matches
+
+        :param message: Message to be handled i.e: 'you are gay'
+        :param message_function: Async function to handle the message
+        """
+        message = message.casefold()
+        if self.handled_messages.get('message') is not None:
+            raise KickBotException(f"Message: {message} already set in handled messages")
+        self.handled_messages[message] = message_function
+
+    def add_command_handler(self, command: str, command_function: Callable) -> None:
         """
         Add a command to be handled, and the asynchronous function to handle that command.
 
-        :param message: Message to be handled i.e: !hello
-        :param command_function: Async function to handle the command
+        Command handler will call the function if the first word matches
+        Message handler will call the function if the entire message content matches
+
+        Inside the command handler function, you can access arguments of the command as a list.
+        i.e: message.args = ['!hello', 'world', 'what's', 'up']
         """
-        message = message.casefold()
+        command = command.casefold()
         if self.handled_commands.get('message') is not None:
-            raise KickBotException(f"Command: {message} already set in handled commands")
-        self.handled_commands[message] = command_function
+            raise KickBotException(f"Command: {command} already set in handled commands")
+        self.handled_commands[command] = command_function
 
     def set_streamer(self, streamer_name: str) -> None:
         """
@@ -67,28 +84,39 @@ class KickBot:
 
     async def send_text(self, message: str) -> None:
         """
-        Used inside a command handler function, to send text in the chat.
+        Used inside a command/message handler function, to send text in the chat.
         reply_text below is used to reply to a specific users message.
 
         :param message: Message to be sent in the chat
         """
         if not type(message) == str or message.strip() == "":
-            raise KickBotException("Invalid message reply. Must be a non empty string.")
+            raise KickBotException("Invalid message. Must be a non empty string.")
         print(f"Sending message: {message}")
         r = KickHelper.send_message_in_chat(self, message)
         if r.status_code != 200:
-            raise KickBotException(f"An error occurred while sending {message}")
+            raise KickBotException(f"An error occurred while sending message {message}")
 
-    async def reply_text(self, message: str, user_id: int):
-        ...
+    async def reply_text(self, original_message: KickMessage, reply_message: str) -> None:
+        """
+        Used inside a command/message handler function to reply to the original message.
+
+        :param original_message: The original KickMessage argument in the handler function
+        :param reply_message: string to reply to the original message
+        """
+        if not type(reply_message) == str or reply_message.strip() == "":
+            raise KickBotException("Invalid reply message. Must be a non empty string.")
+        print(f"Sending reply: {reply_message}")
+        r = KickHelper.send_reply_in_chat(self, original_message, reply_message)
+        if r.status_code != 200:
+            raise KickBotException(f"An error occurred while sending reply {reply_message}")
 
     async def _poll(self) -> None:
         """
-        Main function to poll the streamers chat and respond to messages/commands.
+        Main internal function to poll the streamers chat and respond to messages/commands.
         """
         if self.streamer_name is None:
             raise KickBotException("Must set streamer name before polling.")
-        async with websockets.connect(self.ws_uri) as self.sock:
+        async with websockets.connect(self._ws_uri) as self.sock:
             connection_response = await self._recv()
             await self._handle_first_connect(connection_response)
             await self._join_chatroom(self.chatroom_id)
@@ -99,7 +127,7 @@ class KickBot:
                         await self._handle_chat_message(response)
                 except asyncio.exceptions.CancelledError:
                     break
-        print(f"Disconnected from websocket {self.socket_id}")
+        print(f"Disconnected from websocket {self._socket_id}")
 
     async def _handle_chat_message(self, inbound_message: dict) -> None:
         """
@@ -109,9 +137,15 @@ class KickBot:
         """
         message: KickMessage = self._message_from_data(inbound_message)
         content = message.content.casefold()
+        command = message.args[0].casefold()
         print(f"New Message: {content}")
-        if content in self.handled_commands:
-            command_func = self.handled_commands[content]
+
+        if content in self.handled_messages:
+            message_func = self.handled_messages[content]
+            await message_func(self, message)
+
+        elif command in self.handled_commands:
+            command_func = self.handled_commands[command]
             await command_func(self, message)
 
     async def _join_chatroom(self, chatroom_id: int) -> None:
@@ -120,10 +154,12 @@ class KickBot:
 
          :param chatroom_id: ID of the chatroom, mainly the streamer to monitor
          """
-        join_v2_command = {'event': 'pusher:subscribe', 'data': {'auth': '', 'channel': f"chatrooms.{chatroom_id}.v2"}}
-        await self._send(join_v2_command)
-        join_v2_response = await self._recv()
-        print(f"Joined chatroom {chatroom_id} | Response: {join_v2_response} ")
+        join_command = {'event': 'pusher:subscribe', 'data': {'auth': '', 'channel': f"chatrooms.{chatroom_id}.v2"}}
+        await self._send(join_command)
+        join_response = await self._recv()
+        if join_response.get('event') != "pusher:subscription_succeeded":
+            raise KickBotException(f"Error when attempting to join chatroom {chatroom_id}. Response: {join_response}")
+        print(f"Bot Joined chatroom {chatroom_id}")
 
     async def _handle_first_connect(self, connection_response: dict) -> None:
         """
@@ -133,36 +169,12 @@ class KickBot:
         """
         if connection_response.get('event') != 'pusher:connection_established':
             raise Exception('Error establishing connection to socket.')
-        self.socket_id = json.loads(connection_response.get('data')).get('socket_id')
-        print(f"Successfully Connected to socket... Socket ID: {self.socket_id}")
-        await self._handle_first_socket_auth()
-
-    async def _handle_first_socket_auth(self) -> None:
-        """
-        Handle the initial authentication in the websocket, after authenticating via http
-        self.client.get_socket_auth_token uses the client.auth_token received from http login as Authorization header
-
-        Honestly not sure if this is necessary. I think the socket doesn't require auth to listen, and sending
-        messages is handled via http post, so I don't think we even need this, its just what the browser socket does.
-        """
-        # userfeed auth token is HMAC SHA256 hex digest of 58469.447649:private-userfeed.18698546
-        #                            socket_id        userfeed channel
-        self.userfeed_auth_token = self.client.get_socket_auth_token(socket_id=self.socket_id,
-                                                                     channel_name='private-userfeed.'
-                                                                                  f'{self.client.user_id}')
-        auth_command = {"event": "pusher:subscribe",
-                        "data": {"auth": self.userfeed_auth_token,
-                                 'channel': f'private-userfeed.{self.client.user_id}'}
-                        }
-        await self._send(auth_command)
-        auth_response = await self._recv()
-        if auth_response.get('event') != 'pusher_internal:subscription_succeeded':
-            raise KickBotException(f"Error authenticating on socket. {auth_response}")
-        print(f"Successfully authenticated in Socket ID: {self.socket_id}")
+        self._socket_id = json.loads(connection_response.get('data')).get('socket_id')
+        print(f"Successfully Connected to socket... Socket ID: {self._socket_id}")
 
     async def _send(self, command: dict) -> None:
         """
-        Convert command to json and send over socket.
+        Json dumps command and sends over socket.
 
         :param command: dictionary to convert to json command
         """
@@ -170,7 +182,7 @@ class KickBot:
 
     async def _recv(self) -> dict:
         """
-        Receive socket inbound command and jsonify it
+        Json loads command received from socket.
 
         :return: dict / json inbound socket command
         """

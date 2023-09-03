@@ -1,3 +1,8 @@
+"""
+This isn't really used anymore, because tls_client rarely gets blocked by cloudflare.
+But in the case of a cloudflare block when requesting token provider, we will just retrieve to tokens and cookies
+using undetected_chromedriver / selenium.
+"""
 import json
 import time
 import requests
@@ -5,11 +10,8 @@ import requests
 import undetected_chromedriver as webdriver
 from selenium.webdriver.common.by import By
 
+from .constants import KickChromedriverException
 from requests.cookies import RequestsCookieJar, create_cookie
-
-
-class KickChromedriverException(Exception):
-    ...
 
 
 def get_cookies_and_tokens_via_selenium() -> tuple[dict, RequestsCookieJar]:

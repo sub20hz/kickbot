@@ -1,12 +1,9 @@
 import json
 import requests
 
-from .constants import BASE_HEADERS
+from .constants import BASE_HEADERS, KickHelperException
 from .kick_client import KickClient
-
-
-class KickHelperException(Exception):
-    ...
+from .kick_message import KickMessage
 
 
 class KickHelper:
@@ -45,5 +42,28 @@ class KickHelper:
         headers = BASE_HEADERS.copy()
         headers['X-Xsrf-Token'] = bot.client.xsrf
         headers['Authorization'] = "Bearer " + bot.client.auth_token
-        payload = {"message": message, "chatroom_id": bot.chatroom_id}
+        payload = {"message": message,
+                   "chatroom_id": bot.chatroom_id}
+        return bot.client.scraper.post(url, json=payload, cookies=bot.client.cookies, headers=headers)
+
+    @staticmethod
+    def send_reply_in_chat(bot, message: KickMessage, reply_message: str) -> requests.Response:
+        url = f"https://kick.com/api/v2/messages/send/{bot.chatroom_id}"
+        headers = BASE_HEADERS.copy()
+        headers['X-Xsrf-Token'] = bot.client.xsrf
+        headers['Authorization'] = "Bearer " + bot.client.auth_token
+        payload = {
+            "content": reply_message,
+            "type": "reply",
+            "metadata": {
+                "original_message": {
+                    "id": message.id,
+                    "content": message.content
+                },
+                "original_sender": {
+                    "id": message.sender.user_id,
+                    "username": message.sender.username
+                }
+            }
+        }
         return bot.client.scraper.post(url, json=payload, cookies=bot.client.cookies, headers=headers)
