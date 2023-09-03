@@ -58,6 +58,10 @@ if __name__ == '__main__':
 
     bot.poll()
 ```
+### Output
+![output](output.png)
+
+
 ## Command and Message Handling
 
 ---
