@@ -41,7 +41,7 @@ async def handle_goodbye_command(bot: KickBot, message: KickMessage):
 async def handle_time_command(bot: KickBot, message: KickMessage):
     time = str(datetime.utcnow())
     response = f"Current UTC Time: {time}"
-    await bot.send_text(response)
+    await bot.reply_text(message, response)
 
 
 if __name__ == '__main__':
