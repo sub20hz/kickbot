@@ -1,10 +1,13 @@
 import requests
+import logging
 import tls_client
 
 from requests.cookies import RequestsCookieJar
 
 from .constants import BASE_HEADERS, KickAuthException
 from .selenium_help import get_cookies_and_tokens_via_selenium
+
+logger = logging.getLogger(__name__)
 
 
 class KickClient:
@@ -36,7 +39,7 @@ class KickClient:
         then send the login post with the scraper over http with self.scraper (tls_client).
         The cf_clearence cookie from chromedriver will bypass cloudflare blocking again.
         """
-        print("Logging user-bot in...")
+        logger.info("Logging user-bot in...")
         try:
             initial_token_response = self._request_token_provider()
             token_data = initial_token_response.json()
@@ -44,9 +47,9 @@ class KickClient:
             self.xsrf = initial_token_response.cookies['XSRF-TOKEN']
 
         except (requests.exceptions.HTTPError, requests.exceptions.JSONDecodeError):
-            print("Cloudflare Block. Getting tokens and cookies with chromedriver...")
+            logger.info("Cloudflare Block. Getting tokens and cookies with chromedriver...")
             token_data, cookies = get_cookies_and_tokens_via_selenium()
-            print("Done retrieving data via selenium")
+            logger.info("Done retrieving data via selenium")
             self.cookies = cookies
             self.xsrf = cookies['XSRF-TOKEN']
 
@@ -73,7 +76,7 @@ class KickClient:
                 raise KickAuthException("Cloudflare blocked (gay). Might need to set a proxy. Response:", login_data)
             case _:
                 raise KickAuthException(f"Unexpected Response. Status Code: {login_status} | Response: {login_data}")
-        print("Login Successful...")
+        logger.info("Login Successful...")
         self._get_user_info()
 
     def _get_user_info(self) -> None:

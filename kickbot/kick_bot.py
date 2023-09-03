@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import websockets
 
 from typing import Callable
@@ -8,6 +9,8 @@ from .constants import KickBotException
 from .kick_client import KickClient
 from .kick_helper import KickHelper
 from .kick_message import KickMessage
+
+logger = logging.getLogger(__name__)
 
 
 class KickBot:
@@ -32,7 +35,7 @@ class KickBot:
         try:
             asyncio.run(self._poll())
         except KeyboardInterrupt:
-            print("Bot stopped.")
+            logger.info("Bot stopped.")
             return
 
     def add_message_handler(self, message: str, message_function: Callable) -> None:
@@ -94,7 +97,7 @@ class KickBot:
         """
         if not type(message) == str or message.strip() == "":
             raise KickBotException("Invalid message. Must be a non empty string.")
-        print(f"Sending message: {message}")
+        logger.debug(f"Sending message: {message}")
         r = KickHelper.send_message_in_chat(self, message)
         if r.status_code != 200:
             raise KickBotException(f"An error occurred while sending message {message}")
@@ -108,7 +111,7 @@ class KickBot:
         """
         if not type(reply_message) == str or reply_message.strip() == "":
             raise KickBotException("Invalid reply message. Must be a non empty string.")
-        print(f"Sending reply: {reply_message}")
+        logger.debug(f"Sending reply: {reply_message}")
         r = KickHelper.send_reply_in_chat(self, original_message, reply_message)
         if r.status_code != 200:
             raise KickBotException(f"An error occurred while sending reply {reply_message}")
@@ -130,7 +133,7 @@ class KickBot:
                         await self._handle_chat_message(response)
                 except asyncio.exceptions.CancelledError:
                     break
-        print(f"Disconnected from websocket {self._socket_id}")
+        logger.info(f"Disconnected from websocket {self._socket_id}")
 
     async def _handle_chat_message(self, inbound_message: dict) -> None:
         """
@@ -141,14 +144,18 @@ class KickBot:
         message: KickMessage = KickHelper.message_from_data(inbound_message)
         content = message.content.casefold()
         command = message.args[0].casefold()
-        print(f"New Message from {message.sender.username} | MESSAGE: {content}")
+        logger.debug(f"New Message from {message.sender.username} | MESSAGE: {content}")
 
         if content in self.handled_messages:
             message_func = self.handled_messages[content]
+            logger.info(f"Handled Message: {content} from user {message.sender.username} ({message.sender.user_id}) | "
+                        f"Called Function: {message_func}")
             await message_func(self, message)
 
         elif command in self.handled_commands:
             command_func = self.handled_commands[command]
+            logger.info(f"Handled Command: {command} from user {message.sender.username} ({message.sender.user_id}) | "
+                        f"Called Function: {command_func}")
             await command_func(self, message)
 
     async def _join_chatroom(self, chatroom_id: int) -> None:
@@ -162,7 +169,7 @@ class KickBot:
         join_response = await self._recv()
         if join_response.get('event') != "pusher_internal:subscription_succeeded":
             raise KickBotException(f"Error when attempting to join chatroom {chatroom_id}. Response: {join_response}")
-        print(f"Bot Joined chatroom {chatroom_id}")
+        logger.info(f"Bot Joined chatroom {chatroom_id} ({self.streamer_name})")
 
     async def _handle_first_connect(self, connection_response: dict) -> None:
         """
@@ -173,7 +180,7 @@ class KickBot:
         if connection_response.get('event') != 'pusher:connection_established':
             raise Exception('Error establishing connection to socket.')
         self._socket_id = json.loads(connection_response.get('data')).get('socket_id')
-        print(f"Successfully Connected to socket... Socket ID: {self._socket_id}")
+        logger.info(f"Successfully Connected to socket... Socket ID: {self._socket_id}")
 
     async def _send(self, command: dict) -> None:
         """
@@ -190,5 +197,3 @@ class KickBot:
         :return: dict / json inbound socket command
         """
         return json.loads(await self.sock.recv())
-
-

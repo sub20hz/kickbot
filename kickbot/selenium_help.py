@@ -5,24 +5,28 @@ using undetected_chromedriver / selenium.
 """
 import json
 import time
+import logging
 import requests
 
 import undetected_chromedriver as webdriver
+
 from selenium.webdriver.common.by import By
+from requests.cookies import RequestsCookieJar, create_cookie
 
 from .constants import KickChromedriverException
-from requests.cookies import RequestsCookieJar, create_cookie
+
+logger = logging.getLogger(__name__)
 
 
 def get_cookies_and_tokens_via_selenium() -> tuple[dict, RequestsCookieJar]:
     driver = webdriver.Chrome(headless=True)
-    print("Fetching kick.com...")
+    logger.info("Fetching kick.com...")
     driver.get("https://kick.com/")
-    print("Fetching kick-token-provider...")
+    logger.info("Fetching kick-token-provider...")
     driver.get("https://kick.com/kick-token-provider")
     time.sleep(3)
     body_element = driver.find_element(By.TAG_NAME, "body")
-    print("Parsing body and cookies...")
+    logger.info("Parsing body and cookies...")
     body_text = body_element.text
     cookies = driver.get_cookies()
     driver.close()
