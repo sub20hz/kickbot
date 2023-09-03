@@ -10,6 +10,7 @@
 - [Features](#features)
 - [Example](#example)
 - [Command / Message handling](#command-and-message-handling)
+- [Sending Messages / Reply's](#sending-messages-and-replys)
 - [Timed event functions](#timed-events)
 
 
@@ -48,8 +49,8 @@ from datetime import datetime, timedelta
 async def handle_hello_message(bot: KickBot, message: KickMessage):
     content = message.content
     sender_username = message.sender.username
-    response = f"Hello {sender_username}. Got your message {content}"
-    await bot.send_text(response)
+    chat_message = f"Hello {sender_username}. Got your message {content}"
+    await bot.send_text(chat_message)
 
     
 async def handle_time_command(bot: KickBot, message: KickMessage):
@@ -80,8 +81,10 @@ if __name__ == '__main__':
 ### Output
 ![output](output.png)
 
+<br>
 
 ## Command and Message Handling
+
 
 ---
 - Handler callback functions must be async
@@ -130,6 +133,31 @@ async def hello_handler(bot: KickBot, message: KickMessage):
     response = f"Hello {sender_username}"
     await bot.reply_text(message, response)
 ```
+<br>
+
+## Sending Messages and Reply's
+
+Functions mainly to be used inside a callback function, to send a message in chat, or reply to a users message.
+
+### ```bot.send_text(chat_message: str)```
+
+#### Chat Message Paramater: (type: ```str```)
+
+- Message to be sent in chat
+
+<br>
+
+### ```bot.reply_text(message: KickMessage, reply: str)```
+
+#### Message Paramater: (type: ```KickMessage```)
+
+- The Message you want to reply to
+
+#### Reply Paramater: (type: ```str```)
+
+- The Reply to send to the Message
+
+<br>
 
 ## Timed Events
 Set a reoccurring function to be called, and the frequency to call the function.
