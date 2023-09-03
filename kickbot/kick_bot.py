@@ -1,8 +1,11 @@
 import asyncio
 import json
 import logging
+import threading
+
 import websockets
 
+from datetime import timedelta
 from typing import Callable
 
 from .constants import KickBotException
@@ -27,6 +30,7 @@ class KickBot:
         self.chatroom_id: int | None = None
         self.handled_commands: dict[str, Callable] = {}
         self.handled_messages: dict[str, Callable] = {}
+        self._is_active = True
 
     def poll(self):
         """
@@ -38,6 +42,22 @@ class KickBot:
             logger.info("Bot stopped.")
             return
 
+    def set_streamer(self, streamer_name: str) -> None:
+        """
+        Set the streamer for the bot to monitor.
+
+        :param streamer_name: Username of the streamer for the bot to monitor
+        """
+        if self.streamer_name is not None:
+            raise KickBotException("Streamer already set. Only able to set one streamer at a time.")
+        self.streamer_name = streamer_name
+        self.streamer_info = KickHelper.get_streamer_info(self.client, streamer_name)
+        try:
+            self.chatroom_info = self.streamer_info.get('chatroom')
+            self.chatroom_id = self.chatroom_info.get('id')
+        except ValueError:
+            raise KickBotException("Error retrieving streamer chatroom id. Are you sure that username is correct?")
+
     def add_message_handler(self, message: str, message_function: Callable) -> None:
         """
         Add a message to be handled, and the asynchronous function to handle that message.
@@ -45,7 +65,7 @@ class KickBot:
         Message handler will call the function if the entire message content matches
         Command handler will call the function if the first word matches
 
-        :param message: Message to be handled i.e: 'you are gay'
+        :param message: Message to be handled i.e: 'hello world'
         :param message_function: Async function to handle the message
         """
         if self.streamer_name is None:
@@ -62,8 +82,8 @@ class KickBot:
         Command handler will call the function if the first word matches
         Message handler will call the function if the entire message content matches
 
-        Inside the command handler function, you can access arguments of the command as a list.
-        i.e: message.args = ['!hello', 'world', 'what's', 'up']
+        :param command: Command to be handled i.e: '!time'
+        :param command_function: Async function to handle the command
         """
         if self.streamer_name is None:
             raise KickBotException("Must set streamer name to monitor first.")
@@ -72,25 +92,24 @@ class KickBot:
             raise KickBotException(f"Command: {command} already set in handled commands")
         self.handled_commands[command] = command_function
 
-    def set_streamer(self, streamer_name: str) -> None:
+    def add_timed_event(self, frequency_time: timedelta, timed_function: Callable):
         """
-        Set the streamer for the bot to monitor.
+        Add an event function to be called with a frequency of frequency_time.
 
-        :param streamer_name: Username of the streamer
+        :param frequency_time: Time interval between function calls.
+        :param timed_function: Async function to be called.
         """
-        if self.streamer_name is not None:
-            raise KickBotException("Streamer already set. Only able to set one streamer at a time.")
-        self.streamer_name = streamer_name
-        self.streamer_info = KickHelper.get_streamer_info(self.client, streamer_name)
-        try:
-            self.chatroom_info = self.streamer_info.get('chatroom')
-            self.chatroom_id = self.chatroom_info.get('id')
-        except ValueError:
-            raise KickBotException("Error retrieving streamer chatroom id. Are you sure that username is correct?")
+        if frequency_time.total_seconds() <= 0:
+            raise KickBotException("Frequency time must be greater than 0.")
+        event_thread = threading.Thread(target=asyncio.run,
+                                        args=(self._run_timed_event(frequency_time, timed_function),),
+                                        daemon=True,
+                                        )
+        event_thread.start()
 
     async def send_text(self, message: str) -> None:
         """
-        Used inside a command/message handler function, to send text in the chat.
+        Used to send text in the chat.
         reply_text below is used to reply to a specific users message.
 
         :param message: Message to be sent in the chat
@@ -104,7 +123,7 @@ class KickBot:
 
     async def reply_text(self, original_message: KickMessage, reply_message: str) -> None:
         """
-        Used inside a command/message handler function to reply to the original message.
+        Used inside a command/message handler function to reply to the original message / command.
 
         :param original_message: The original KickMessage argument in the handler function
         :param reply_message: string to reply to the original message
@@ -115,6 +134,10 @@ class KickBot:
         r = KickHelper.send_reply_in_chat(self, original_message, reply_message)
         if r.status_code != 200:
             raise KickBotException(f"An error occurred while sending reply {reply_message}")
+
+    ########################################################################################
+    #    INTERNAL FUNCTIONS
+    ########################################################################################
 
     async def _poll(self) -> None:
         """
@@ -134,6 +157,7 @@ class KickBot:
                 except asyncio.exceptions.CancelledError:
                     break
         logger.info(f"Disconnected from websocket {self._socket_id}")
+        self._is_active = False
 
     async def _handle_chat_message(self, inbound_message: dict) -> None:
         """
@@ -181,6 +205,18 @@ class KickBot:
             raise Exception('Error establishing connection to socket.')
         self._socket_id = json.loads(connection_response.get('data')).get('socket_id')
         logger.info(f"Successfully Connected to socket... Socket ID: {self._socket_id}")
+
+    async def _run_timed_event(self, frequency_time: timedelta, timed_function: Callable):
+        """
+        Launched in a thread when a user calls bot.add_timed_event, runs until bot is inactive
+
+        :param frequency_time: Frequency to call the timed function
+        :param timed_function: timed function to be called
+        """
+        while self._is_active:
+            await asyncio.sleep(frequency_time.total_seconds())
+            await timed_function(self)
+            logger.info(f"Timed Event | Called Function: {timed_function}")
 
     async def _send(self, command: dict) -> None:
         """
