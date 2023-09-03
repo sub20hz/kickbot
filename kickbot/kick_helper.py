@@ -67,3 +67,21 @@ class KickHelper:
             }
         }
         return bot.client.scraper.post(url, json=payload, cookies=bot.client.cookies, headers=headers)
+
+    @staticmethod
+    def message_from_data(response: dict) -> KickMessage:
+        data = response.get('data')
+        if data is None:
+            raise KickHelperException(f"Error parsing message data from response {response}")
+        return KickMessage(data)
+
+    @staticmethod
+    def get_ws_uri() -> str:
+        """
+        This could probably be a constant somewhere else, but this makes it ease and easy to change.
+        Also, they seem to always use the same wss, but in the case it needs to be dynamically found,
+        having this function will make it easier.
+
+        :return: kicks websocket url
+        """
+        return 'wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.6.0&flash=false'

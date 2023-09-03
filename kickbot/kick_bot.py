@@ -16,7 +16,7 @@ class KickBot:
     """
     def __init__(self, username: str, password: str) -> None:
         self.client: KickClient = KickClient(username, password)
-        self._ws_uri = self._get_ws_url()
+        self._ws_uri = KickHelper.get_ws_uri()
         self._socket_id: str | None = None
         self.streamer_name: str | None = None
         self.streamer_info: dict | None = None
@@ -28,7 +28,6 @@ class KickBot:
     def poll(self):
         """
         Main function to activate the bot polling.
-
         """
         try:
             asyncio.run(self._poll())
@@ -46,6 +45,8 @@ class KickBot:
         :param message: Message to be handled i.e: 'you are gay'
         :param message_function: Async function to handle the message
         """
+        if self.streamer_name is None:
+            raise KickBotException("Must set streamer name to monitor first.")
         message = message.casefold()
         if self.handled_messages.get('message') is not None:
             raise KickBotException(f"Message: {message} already set in handled messages")
@@ -61,6 +62,8 @@ class KickBot:
         Inside the command handler function, you can access arguments of the command as a list.
         i.e: message.args = ['!hello', 'world', 'what's', 'up']
         """
+        if self.streamer_name is None:
+            raise KickBotException("Must set streamer name to monitor first.")
         command = command.casefold()
         if self.handled_commands.get('message') is not None:
             raise KickBotException(f"Command: {command} already set in handled commands")
@@ -135,10 +138,10 @@ class KickBot:
 
         :param inbound_message: Raw inbound message from socket
         """
-        message: KickMessage = self._message_from_data(inbound_message)
+        message: KickMessage = KickHelper.message_from_data(inbound_message)
         content = message.content.casefold()
         command = message.args[0].casefold()
-        print(f"New Message: {content}")
+        print(f"New Message from {message.sender.username} | MESSAGE: {content}")
 
         if content in self.handled_messages:
             message_func = self.handled_messages[content]
@@ -157,7 +160,7 @@ class KickBot:
         join_command = {'event': 'pusher:subscribe', 'data': {'auth': '', 'channel': f"chatrooms.{chatroom_id}.v2"}}
         await self._send(join_command)
         join_response = await self._recv()
-        if join_response.get('event') != "pusher:subscription_succeeded":
+        if join_response.get('event') != "pusher_internal:subscription_succeeded":
             raise KickBotException(f"Error when attempting to join chatroom {chatroom_id}. Response: {join_response}")
         print(f"Bot Joined chatroom {chatroom_id}")
 
@@ -188,20 +191,4 @@ class KickBot:
         """
         return json.loads(await self.sock.recv())
 
-    @staticmethod
-    def _message_from_data(response: dict) -> KickMessage:
-        data = response.get('data')
-        if data is None:
-            raise KickBotException(f"Error parsing message data from response {response}")
-        return KickMessage(data)
 
-    @staticmethod
-    def _get_ws_url() -> str:
-        """
-        This could be a constant somewhere else, but this makes it ease and easy to change.
-        Also, they seem to always use the same wss, but in the case it needs to be dynamically found,
-        having this function will make it easier.
-
-        :return: kicks websocket url
-        """
-        return 'wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.6.0&flash=false'
