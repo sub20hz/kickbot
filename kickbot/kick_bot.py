@@ -51,9 +51,10 @@ class KickBot:
         if self.streamer_name is None:
             raise KickBotException("Must set streamer name to monitor first.")
         message = message.casefold()
-        if self.handled_messages.get('message') is not None:
+        if self.handled_messages.get(message) is not None:
             raise KickBotException(f"Message: {message} already set in handled messages")
         self.handled_messages[message] = message_function
+        breakpoint()
 
     def add_command_handler(self, command: str, command_function: Callable) -> None:
         """
@@ -68,9 +69,10 @@ class KickBot:
         if self.streamer_name is None:
             raise KickBotException("Must set streamer name to monitor first.")
         command = command.casefold()
-        if self.handled_commands.get('message') is not None:
+        if self.handled_commands.get(command) is not None:
             raise KickBotException(f"Command: {command} already set in handled commands")
         self.handled_commands[command] = command_function
+        breakpoint()
 
     def set_streamer(self, streamer_name: str) -> None:
         """
