@@ -76,7 +76,7 @@ async def handle_hello_command(bot: KickBot, message: KickMessage):...
 
 - This will give you access to functions for the bot, such as ```bot.send_text```, and ```bot.reply_text```.
 #### Message parameter (type: ```KickMessage```)
-- This will give you access to all attributes of the message that triggered the handler. See [KickMessage]() for 
+- This will give you access to all attributes of the message that triggered the handler. See [KickMessage](/kickbot/kick_message.py) for 
 a full list of attributes.
 
 - Some usefule message attributes include:
