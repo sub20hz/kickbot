@@ -1,11 +1,10 @@
 # kickbot
 
----
-### A python package to create bots for kick.com
+### Unofficial python package to create bots and interact with the kick.com api
 
+---
 ## About
 
----
 This package allows you to create bots (user bots) to monitor a stream. 
 
 You will need to set up a 'user bot' account (a normal user account to act as a bot) and disable 2-factor authentication for the bot to be able to login and handle commands / messages.
