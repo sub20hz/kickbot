@@ -1,0 +1,69 @@
+{
+   "id":17786278,
+   "user_id":18739449,
+   "slug":"kickbot-py",
+   "is_banned":false,
+   "name_updated_at":null,
+   "vod_enabled":true,
+   "subscription_enabled":false,
+   "followersCount":0,
+   "subscriber_badges":[
+
+   ],
+   "banner_image":null,
+   "recent_categories":[
+
+   ],
+   "livestream":null,
+   "role":null,
+   "muted":false,
+   "follower_badges":[
+
+   ],
+   "offline_banner_image":null,
+   "can_host":true,
+   "user":{
+      "id":18739449,
+      "username":"kickbot_py",
+      "agreed_to_terms":true,
+      "email_verified_at":"2023-09-03T03:37:48.000000Z",
+      "bio":null,
+      "country":null,
+      "state":null,
+      "city":null,
+      "instagram":null,
+      "twitter":null,
+      "youtube":null,
+      "discord":null,
+      "tiktok":null,
+      "facebook":null,
+      "profile_pic":null
+   },
+   "chatroom":{
+      "id":17530655,
+      "chatable_type":"App\\Models\\Channel",
+      "channel_id":17786278,
+      "created_at":"2023-09-03T03:37:48.000000Z",
+      "updated_at":"2023-09-03T03:37:48.000000Z",
+      "chat_mode_old":"public",
+      "chat_mode":"public",
+      "slow_mode":false,
+      "chatable_id":17786278,
+      "followers_mode":false,
+      "subscribers_mode":false,
+      "emotes_mode":false,
+      "message_interval":0,
+      "following_min_duration":0
+   },
+   "ascending_links":[
+
+   ],
+   "plan":null,
+   "previous_livestreams":[
+
+   ],
+   "verified":null,
+   "media":[
+
+   ]
+}

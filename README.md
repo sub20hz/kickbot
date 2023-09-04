@@ -11,6 +11,7 @@
 - [Example](#example)
 - [Command / Message handling](#command-and-message-handling)
 - [Sending Messages / Reply's](#sending-messages-and-replys)
+- [Streamer / Chat information](#streamer-and-chat-information)
 - [Timed event functions](#timed-events)
 
 
@@ -36,6 +37,7 @@ Currently supports the following features. More may be added soon, and contribut
 - Sending messages: Have the bot send a message in chat
 - Replying to messages: Reply directly to a users previous message / command.
 - Timed events: Set a reoccurring event. i.e: Sending links to socials in chat every 30 minutes.
+- Access streamer and chat room information.
 
 ## Example
 
@@ -159,6 +161,27 @@ Functions mainly to be used inside a callback function, to send a message in cha
 
 <br>
 
+## Streamer and Chat Information
+You can access information about the streamer, and chatroom via the ```bot.streamer_info```  and ```bot.chatroom_info``` dictionaries.
+
+See [streamer_info_example.json](/streamer_info_example.json) for a full example of ```bot.streamer_info```. 
+
+*Note*: ```bot.chatroom_info``` is the same as the ```'chatroom'``` field in ```bot.streamer_info```
+
+#### Example 
+
+```python
+streamer_name = bot.streamer_name
+follower_count = bot.streamer_info.get('followersCount')
+streamer_user_id = bot.streamer_info.get('user_id')
+
+is_chat_slow_mode = bot.chatroom_info.get('slow_mode')
+is_followers_only = bot.chatroom_info.get('followers_only')
+is_subscribers_only = bot.chatroom_info.get('subscribers_only')
+```
+
+<br>
+
 ## Timed Events
 Set a reoccurring function to be called, and the frequency to call the function.
 
@@ -187,3 +210,5 @@ async def send_links_in_chat(bot: KickBot):...
 
 - This will give you access to functions for the bot. For timed events, the most useful 
 is ```bot.send_text``` to send a reoccurring message in chat
+
+

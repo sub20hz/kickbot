@@ -2,15 +2,21 @@ import asyncio
 import json
 import logging
 import threading
-
 import websockets
 
 from datetime import timedelta
 from typing import Callable
 
+from .kick_helper import (
+    get_ws_uri,
+    get_streamer_info,
+    message_from_data,
+    send_message_in_chat,
+    send_reply_in_chat
+)
+
 from .constants import KickBotException
 from .kick_client import KickClient
-from .kick_helper import KickHelper
 from .kick_message import KickMessage
 
 logger = logging.getLogger(__name__)
@@ -22,7 +28,7 @@ class KickBot:
     """
     def __init__(self, username: str, password: str) -> None:
         self.client: KickClient = KickClient(username, password)
-        self._ws_uri = KickHelper.get_ws_uri()
+        self._ws_uri = get_ws_uri()
         self._socket_id: str | None = None
         self.streamer_name: str | None = None
         self.streamer_info: dict | None = None
@@ -51,7 +57,7 @@ class KickBot:
         if self.streamer_name is not None:
             raise KickBotException("Streamer already set. Only able to set one streamer at a time.")
         self.streamer_name = streamer_name
-        self.streamer_info = KickHelper.get_streamer_info(self.client, streamer_name)
+        self.streamer_info = get_streamer_info(self.client, streamer_name)
         try:
             self.chatroom_info = self.streamer_info.get('chatroom')
             self.chatroom_id = self.chatroom_info.get('id')
@@ -99,6 +105,8 @@ class KickBot:
         :param frequency_time: Time interval between function calls.
         :param timed_function: Async function to be called.
         """
+        if self.streamer_name is None:
+            raise KickBotException("Must set streamer name to monitor first.")
         if frequency_time.total_seconds() <= 0:
             raise KickBotException("Frequency time must be greater than 0.")
         event_thread = threading.Thread(target=asyncio.run,
@@ -117,7 +125,7 @@ class KickBot:
         if not type(message) == str or message.strip() == "":
             raise KickBotException("Invalid message. Must be a non empty string.")
         logger.debug(f"Sending message: {message}")
-        r = KickHelper.send_message_in_chat(self, message)
+        r = send_message_in_chat(self, message)
         if r.status_code != 200:
             raise KickBotException(f"An error occurred while sending message {message}")
 
@@ -131,7 +139,7 @@ class KickBot:
         if not type(reply_message) == str or reply_message.strip() == "":
             raise KickBotException("Invalid reply message. Must be a non empty string.")
         logger.debug(f"Sending reply: {reply_message}")
-        r = KickHelper.send_reply_in_chat(self, original_message, reply_message)
+        r = send_reply_in_chat(self, original_message, reply_message)
         if r.status_code != 200:
             raise KickBotException(f"An error occurred while sending reply {reply_message}")
 
@@ -165,7 +173,7 @@ class KickBot:
 
         :param inbound_message: Raw inbound message from socket
         """
-        message: KickMessage = KickHelper.message_from_data(inbound_message)
+        message: KickMessage = message_from_data(inbound_message)
         content = message.content.casefold()
         command = message.args[0].casefold()
         logger.debug(f"New Message from {message.sender.username} | MESSAGE: {content}")
