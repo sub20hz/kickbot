@@ -1,0 +1,20 @@
+{
+    "slow_mode":false,
+    "followers_mode":false,
+    "subscribers_mode":false,
+    "emotes_mode":false,
+    "message_interval":5,
+    "following_min_duration":0,
+    "email_verified_required":false,
+    "phone_verified_required":false,
+    "non_verified_email_min_age":0,
+    "non_verified_phone_min_age":0,
+    "anti_bot_mode":false,
+    "allow_link":false,
+    "show_quick_emotes":true,
+    "show_banners":true,
+    "advanced_bot_protection":false,
+    "gifts_enabled":true,
+    "gifts_week_enabled":true,
+    "gifts_month_enabled":true
+}

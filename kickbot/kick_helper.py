@@ -2,30 +2,54 @@ import json
 import requests
 
 from .constants import BASE_HEADERS, KickHelperException
-from .kick_client import KickClient
 from .kick_message import KickMessage
 
 
-def get_streamer_info(client: KickClient, streamer_name: str) -> dict:
+def get_streamer_info(bot) -> dict:
     """
     Retrieve dictionary containing all info related to the streamer.
 
-    :param client: KickClient object from KickBot for the scraper and cookies
-    :param streamer_name: name of the streamer to retrieve info on
+    :param bot: main KickBot
     :return: dict containing all streamer info
     """
-    url = f"https://kick.com/api/v2/channels/{streamer_name}"
-    response = client.scraper.get(url, cookies=client.cookies, headers=BASE_HEADERS)
+    url = f"https://kick.com/api/v2/channels/{bot.streamer_slug}"
+    response = bot.client.scraper.get(url, cookies=bot.client.cookies, headers=BASE_HEADERS)
     status = response.status_code
     match status:
         case 403 | 429:
             raise KickHelperException(f"Error retrieving streamer info. Blocked By cloudflare. ({status})")
         case 404:
-            raise KickHelperException(f"Streamer info for '{streamer_name}' not found. (404 error) ")
+            raise KickHelperException(f"Streamer info for '{bot.streamer_name}' not found. (404 error) ")
     try:
         return response.json()
     except json.JSONDecodeError:
         raise KickHelperException(f"Error parsing streamer info json from response. Response: {response.text}")
+
+
+def get_current_viewers(bot) -> int:
+    """
+    Retrieve current amount of viewers in the stream.
+
+    :return: Viewer count as an integer
+    """
+    id = bot.streamer_info.get('id')
+    url = f"https://api.kick.com/private/v0/channels/{id}/viewer-count"
+    response = bot.client.scraper.get(url, cookies=bot.client.cookies, headers=BASE_HEADERS)
+    if response.status_code != 200:
+        raise KickHelperException(f"Error retrieving current viewer count. Response: {response.text}")
+    data = response.json()
+    try:
+        return int(data.get('data').get('viewer_count'))
+    except ValueError:
+        raise KickHelperException(f"Error parsing viewer count. Response: {response.text}")
+
+
+def get_chatroom_settings(bot) -> dict:
+    url = f"https://kick.com/api/internal/v1/channels/{bot.streamer_slug}/chatroom/settings"
+    response = bot.client.scraper.get(url, cookies=bot.client.cookies, headers=BASE_HEADERS)
+    if response.status_code != 200:
+        raise KickHelperException(f"Error retrieving chatroom settings. Response: {response.text}")
+    return response.json().get('data').get('settings')
 
 
 def send_message_in_chat(bot, message: str) -> requests.Response:
@@ -90,8 +114,8 @@ def message_from_data(message: dict) -> KickMessage:
 
 def get_ws_uri() -> str:
     """
-    This could probably be a constant somewhere else, but this makes it easy and easy to change.
-    Also, they seem to always use the same wss, but in the case it needs to be dynamically found,
+    This could probably be a constant somewhere else, but this makes it easy to get and easy to change.
+    Also, they seem to always use the same ws, but in the case it needs to be dynamically found,
     having this function will make it easier.
 
     :return: kicks websocket url

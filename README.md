@@ -13,6 +13,7 @@
 - [Sending Messages / Reply's](#sending-messages-and-replys)
 - [Streamer / Chat information](#streamer-and-chat-information)
 - [Timed event functions](#timed-events)
+- [Leaderboards](#leaderboards)
 
 
 ---
@@ -43,6 +44,7 @@ Currently supports the following features. More may be added soon, and contribut
 
 ---
 
+*Note*: For more examples, look in the [Examples Folder](/examples)
 ```python3
 from kickbot import KickBot, KickMessage
 from datetime import datetime, timedelta
@@ -62,6 +64,8 @@ async def handle_time_command(bot: KickBot, message: KickMessage):
 
     
 async def send_links_in_chat(bot: KickBot):
+    # NOTE: not all chats allow sending links (message won't go through)
+    # you can check bot.chatroom_settings.get('allow_link') to see. 
     links = "Youtube: https://youtube.com\n\nKick: https://kick.com\n\nTwitch: https://kick.com"
     await bot.send_text(links)
     
@@ -141,15 +145,20 @@ async def hello_handler(bot: KickBot, message: KickMessage):
 
 Functions mainly to be used inside a callback function, to send a message in chat, or reply to a users message.
 
-### ```bot.send_text(chat_message: str)```
+### Messages:
+```python
+await bot.send_text(chat_message)
+```
 
 #### Chat Message Paramater: (type: ```str```)
 
 - Message to be sent in chat
 
-<br>
 
-### ```bot.reply_text(message: KickMessage, reply: str)```
+### Reply's:
+```python3
+await bot.reply_text(message, reply)
+```
 
 #### Message Paramater: (type: ```KickMessage```)
 
@@ -162,23 +171,39 @@ Functions mainly to be used inside a callback function, to send a message in cha
 <br>
 
 ## Streamer and Chat Information
-You can access information about the streamer, and chatroom via the ```bot.streamer_info```  and ```bot.chatroom_info``` dictionaries.
+You can access information about the streamer, and chatroom via the ```bot.streamer_info``` , ```bot.chatroom_info```
+and ```bot.chatroom_settings``` dictionaries.
 
-See [streamer_info_example.json](/streamer_info_example.json) for a full example of ```bot.streamer_info```. 
 
-*Note*: ```bot.chatroom_info``` is the same as the ```'chatroom'``` field in ```bot.streamer_info```
-
-#### Example 
-
+Streamer Info: [Full Example]()
 ```python
 streamer_name = bot.streamer_name
 follower_count = bot.streamer_info.get('followersCount')
 streamer_user_id = bot.streamer_info.get('user_id')
+```
 
+Chatroom Info: [Full Example](/examples/chatroom_info_example.json)
+```python
 is_chat_slow_mode = bot.chatroom_info.get('slow_mode')
 is_followers_only = bot.chatroom_info.get('followers_only')
 is_subscribers_only = bot.chatroom_info.get('subscribers_only')
 ```
+
+Chatroom Settings: [Full Example](/examples/chatroom_settings_example.json)
+```python
+links_allowed = bot.chatroom_settings.get('allow_link')
+is_antibot_mode = bot.chatroom_settings.get('anti_bot_mode')
+gifts_enabled = bot.chatroom_settings.get('gifts_enabled')
+```
+
+
+### Viewer Count
+
+Access the current amount of viewers in the stream as an integer. 
+```python
+viewers = bot.current_viewers()
+```
+
 
 <br>
 
@@ -203,7 +228,7 @@ bot.add_timed_event(timedelta(minutes=30), send_links_in_chat)
 ### Timed Event Callback parameter
 
 ```python3
-async def send_links_in_chat(bot: KickBot):...
+async def send_links_in_chat(bot: Kickbot):...
 ```
 
 #### bot parameter (type: ```KickBot```)
@@ -211,4 +236,4 @@ async def send_links_in_chat(bot: KickBot):...
 - This will give you access to functions for the bot. For timed events, the most useful 
 is ```bot.send_text``` to send a reoccurring message in chat
 
-
+<br>
