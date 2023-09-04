@@ -13,7 +13,6 @@
 - [Sending Messages / Reply's](#sending-messages-and-replys)
 - [Streamer / Chat information](#streamer-and-chat-information)
 - [Timed event functions](#timed-events)
-- [Leaderboards](#leaderboards)
 
 
 ---
@@ -197,7 +196,7 @@ gifts_enabled = bot.chatroom_settings.get('gifts_enabled')
 ```
 
 
-### Viewer Count
+#### Viewer Count
 
 Access the current amount of viewers in the stream as an integer. 
 ```python
