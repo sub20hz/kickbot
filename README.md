@@ -54,15 +54,15 @@ from datetime import timedelta
 
 
 async def send_links_in_chat(bot: KickBot):
-""" Timed event to send social links every 30 mins """
-links = "Youtube: https://youtube.com\n\nTwitch: https://twitch.tv"
-await bot.send_text(links)
+    """ Timed event to send social links every 30 mins """
+    links = "Youtube: https://youtube.com\n\nTwitch: https://twitch.tv"
+    await bot.send_text(links)
 
 
 async def time_following(bot: KickBot, message: KickMessage):
-""" Reply to '!following' with the amount of time the user has been following for """
-sender_username = message.sender.username
-viewer_info = bot.moderator.get_viewer_info(sender_username)
+    """ Reply to '!following' with the amount of time the user has been following for """
+    sender_username = message.sender.username
+    viewer_info = bot.moderator.get_viewer_info(sender_username)
     following_since = viewer_info.get('following_since')
     if following_since is not None:
         reply = f"You've been following since: {following_since}"
