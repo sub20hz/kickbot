@@ -24,6 +24,8 @@ This package allows you to create bots (user bots) to monitor a stream.
 You will need to set up a 'user bot' account (a normal user account to act as a bot) and disable 2-factor 
 authentication for the bot to be able to log in and handle commands / messages.
 
+It is reccomended to add the bot user as a moderator for your stream. 
+This will also give you access to additional [moderator functions](#chat-moderation).
 ## Installation
 ```console
 pip install kickbot
