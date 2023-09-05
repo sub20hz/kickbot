@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 def get_streamer_info(bot) -> None:
     """
     Retrieve dictionary containing all info related to the streamer and set bot attributes accordingly.
+
+    :param bot: Main KickBor
     """
     url = f"https://kick.com/api/v2/channels/{bot.streamer_slug}"
     response = bot.client.scraper.get(url, cookies=bot.client.cookies, headers=BASE_HEADERS)
@@ -28,6 +30,8 @@ def get_streamer_info(bot) -> None:
 def get_chatroom_settings(bot) -> None:
     """
     Retrieve chatroom settings for the streamer and set bot.chatroom_settings
+
+    :param bot: Main KickBot
     """
     url = f"https://kick.com/api/internal/v1/channels/{bot.streamer_slug}/chatroom/settings"
     response = bot.client.scraper.get(url, cookies=bot.client.cookies, headers=BASE_HEADERS)
@@ -40,6 +44,8 @@ def get_chatroom_settings(bot) -> None:
 def get_bot_settings(bot) -> None:
     """
     Retrieve the bot settings for the stream. Checks if bot has mod / admin status. Sets attributes accordingly.
+
+    :param bot: Main KickBot
     """
     url = f"https://kick.com/api/v2/channels/{bot.streamer_slug}/me"
     headers = BASE_HEADERS.copy()
@@ -58,6 +64,7 @@ def get_current_viewers(bot) -> int:
     """
     Retrieve current amount of viewers in the stream.
 
+    :param bot: Main KickBot
     :return: Viewer count as an integer
     """
     id = bot.streamer_info.get('id')
@@ -72,11 +79,24 @@ def get_current_viewers(bot) -> int:
         logger.error(f"Error parsing viewer count. Response Status: {response.status_code}")
 
 
+def message_from_data(message: dict) -> KickMessage:
+    """
+    Return a KickMessage object from the raw message data, containing message and sender attributes.
+
+    :param message: Inbound message from websocket
+    :return: KickMessage object with message and sender attributes
+    """
+    data = message.get('data')
+    if data is None:
+        raise KickHelperException(f"Error parsing message data from response {message}")
+    return KickMessage(data)
+
+
 def send_message_in_chat(bot, message: str) -> requests.Response:
     """
     Send a message in a chatroom. Uses v1 API, was having csrf issues using v2 API (code 419).
 
-    :param bot: KickBot object containing streamer, and bot info
+    :param bot: Main KickBot
     :param message: Message to send in the chatroom
     :return: Response from sending the message post request
     """
@@ -93,7 +113,7 @@ def send_reply_in_chat(bot, message: KickMessage, reply_message: str) -> request
     """
     Reply to a users message.
 
-    :param bot: main KickBot
+    :param bot: KickBot object containing streamer, and bot info
     :param message: Original message to reply
     :param reply_message:  Reply message to be sent to the original message
     :return: Response from sending the message post request
@@ -117,6 +137,24 @@ def send_reply_in_chat(bot, message: KickMessage, reply_message: str) -> request
         }
     }
     return bot.client.scraper.post(url, json=payload, cookies=bot.client.cookies, headers=headers)
+
+
+def get_ws_uri() -> str:
+    """
+    This could probably be a constant somewhere else, but this makes it easy to get and easy to change.
+    Also, they seem to always use the same ws, but in the case it needs to be dynamically found,
+    having this function will make it easier.
+
+    :return: kicks websocket url
+    """
+    return 'wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.6.0&flash=false'
+
+
+#################################################################################################
+#
+#                          Helpers used by Moderator class (kick_moderator.py)
+#
+#################################################################################################
 
 
 def ban_user(bot, username: str, minutes: int = 0, is_permanent: bool = False) -> bool:
@@ -171,27 +209,3 @@ def get_viewer_info(bot, username: str) -> dict | None:
         logger.error(f"Error retrieving viewer info for {username} | Status code: {response.status_code}")
         return None
     return response.json()
-
-
-def message_from_data(message: dict) -> KickMessage:
-    """
-    Return a KickMessage object from the raw message data, containing message and sender attributes.
-
-    :param message: Inbound message from websocket
-    :return: KickMessage object with message and sender attributes
-    """
-    data = message.get('data')
-    if data is None:
-        raise KickHelperException(f"Error parsing message data from response {message}")
-    return KickMessage(data)
-
-
-def get_ws_uri() -> str:
-    """
-    This could probably be a constant somewhere else, but this makes it easy to get and easy to change.
-    Also, they seem to always use the same ws, but in the case it needs to be dynamically found,
-    having this function will make it easier.
-
-    :return: kicks websocket url
-    """
-    return 'wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.6.0&flash=false'

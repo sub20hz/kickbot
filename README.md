@@ -60,7 +60,7 @@ async def send_links_in_chat(bot: KickBot):
 
 
 async def time_following(bot: KickBot, message: KickMessage):
-    """ Reply with the amount of time the user has been following for """
+    """ Reply to '!following' with the amount of time the user has been following for """
     sender_username = message.sender.username
     viewer_info = bot.moderator.get_viewer_info(sender_username)
     following_since = viewer_info.get('following_since')
@@ -68,6 +68,12 @@ async def time_following(bot: KickBot, message: KickMessage):
         reply = f"You've been following since: {following_since}"
     else:
         reply = "Your not currently following this channel."
+    await bot.reply_text(message, reply)
+
+
+async def github_link(bot: KickBot, message: KickMessage):
+    """ Reply to '!github' with github link """
+    reply = "Github: 'https://github.com/lukemvc'"
     await bot.reply_text(message, reply)
 
     
@@ -86,8 +92,11 @@ if __name__ == '__main__':
     bot = KickBot(USERBOT_EMAIL, USERBOT_PASS)
     bot.set_streamer(STREAMER)
 
-    bot.add_command_handler('!following', time_following)
     bot.add_timed_event(timedelta(minutes=30), send_links_in_chat)
+    
+    bot.add_command_handler('!following', time_following)
+    bot.add_command_handler('!github', github_link)
+    
     bot.add_message_handler('your gay', ban_if_says_gay)
     
     bot.poll()
@@ -266,14 +275,16 @@ Permanently ban a user.
 <br>
 
 ## Timed Events
+
+```python3
+bot.add_timed_event(timedelta(minutes=30), send_links_in_chat)
+```
 Set a reoccurring function to be called, and the frequency to call the function.
 
 i.e: Send links for your socials in chat every 30 minutes
 
 ### Parameters
-```python3
-bot.add_timed_event(timedelta(minutes=30), send_links_in_chat)
-```
+
 
 #### Frequency parameter (type: ```timedelta```)
 

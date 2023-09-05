@@ -93,6 +93,7 @@ class KickClient:
             raise KickAuthException(f"Error fetching user info from {url}")
         data = user_info_response.json()
         self.user_data = data
+        self.bot_name = data.get('username')
         self.user_id = data.get('id')
 
     def _request_token_provider(self) -> requests.Response:

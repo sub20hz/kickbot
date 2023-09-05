@@ -137,10 +137,10 @@ class KickBot:
         """
         if not type(message) == str or message.strip() == "":
             raise KickBotException("Invalid message. Must be a non empty string.")
-        logger.debug(f"Sending message: {message}")
+        logger.debug(f"Sending message: {message!r}")
         r = send_message_in_chat(self, message)
         if r.status_code != 200:
-            raise KickBotException(f"An error occurred while sending message {message}")
+            raise KickBotException(f"An error occurred while sending message {message!r}")
 
     async def reply_text(self, original_message: KickMessage, reply_message: str) -> None:
         """
@@ -151,10 +151,10 @@ class KickBot:
         """
         if not type(reply_message) == str or reply_message.strip() == "":
             raise KickBotException("Invalid reply message. Must be a non empty string.")
-        logger.debug(f"Sending reply: {reply_message}")
+        logger.debug(f"Sending reply: {reply_message!r}")
         r = send_reply_in_chat(self, original_message, reply_message)
         if r.status_code != 200:
-            raise KickBotException(f"An error occurred while sending reply {reply_message}")
+            raise KickBotException(f"An error occurred while sending reply {reply_message!r}")
 
     def current_viewers(self) -> int:
         """
@@ -209,21 +209,24 @@ class KickBot:
         :param inbound_message: Raw inbound message from socket
         """
         message: KickMessage = message_from_data(inbound_message)
+        if message.sender.username == self.client.bot_name:
+            return
+
         content = message.content.casefold()
         command = message.args[0].casefold()
-        logger.debug(f"New Message from {message.sender.username} | MESSAGE: {content}")
+        logger.debug(f"New Message from {message.sender.username} | MESSAGE: {content!r}")
 
         if content in self.handled_messages:
             message_func = self.handled_messages[content]
             await message_func(self, message)
-            logger.info(f"Handled Message: {content} from user {message.sender.username} ({message.sender.user_id}) | "
-                        f"Called Function: {message_func}")
+            logger.info(f"Handled Message: {content!r} from user {message.sender.username} ({message.sender.user_id}) | "
+                        f"Called Function: '{message_func.__name__}'")
 
         elif command in self.handled_commands:
             command_func = self.handled_commands[command]
             await command_func(self, message)
-            logger.info(f"Handled Command: {command} from user {message.sender.username} ({message.sender.user_id}) | "
-                        f"Called Function: {command_func}")
+            logger.info(f"Handled Command: {command!r} from user {message.sender.username} ({message.sender.user_id}) | "
+                        f"Called Function: '{command_func.__name__}'")
 
     async def _join_chatroom(self, chatroom_id: int) -> None:
         """
