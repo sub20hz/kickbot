@@ -10,11 +10,13 @@ from typing import Callable
 from .constants import KickBotException
 from .kick_client import KickClient
 from .kick_message import KickMessage
+from .kick_moderator import Moderator
 from .kick_helper import (
     get_ws_uri,
     get_streamer_info,
     get_current_viewers,
     get_chatroom_settings,
+    get_bot_settings,
     message_from_data,
     send_message_in_chat,
     send_reply_in_chat
@@ -36,6 +38,10 @@ class KickBot:
         self.streamer_info: dict | None = None
         self.chatroom_info: dict | None = None
         self.chatroom_settings: dict | None = None
+        self.bot_settings: dict | None = None
+        self.is_mod: bool = False
+        self.is_super_admin: bool = False
+        self.moderator: Moderator | None = None
         self.chatroom_id: int | None = None
         self.handled_commands: dict[str, Callable] = {}
         self.handled_messages: dict[str, Callable] = {}
@@ -61,13 +67,15 @@ class KickBot:
             raise KickBotException("Streamer already set. Only able to set one streamer at a time.")
         self.streamer_name = streamer_name
         self.streamer_slug = streamer_name.replace('_', '-')
-        self.streamer_info = get_streamer_info(self)
-        try:
-            self.chatroom_info = self.streamer_info.get('chatroom')
-            self.chatroom_id = self.chatroom_info.get('id')
-            self.chatroom_settings = get_chatroom_settings(self)
-        except ValueError:
-            raise KickBotException("Error retrieving streamer chatroom id. Are you sure that username is correct?")
+        get_streamer_info(self)
+        get_chatroom_settings(self)
+        get_bot_settings(self)
+        if self.is_mod:
+            self.moderator = Moderator(self)
+            logger.info(f"Bot is confirmed as a moderator for {self.streamer_name}")
+        else:
+            logger.warning("Bot is not a moderator in the stream. To access moderator functions, make the bot a mod."
+                           "(You can still send messages and reply's, bot moderator status is recommended)")
 
     def add_message_handler(self, message: str, message_function: Callable) -> None:
         """

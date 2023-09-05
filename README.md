@@ -12,6 +12,7 @@
 - [Command / Message handling](#command-and-message-handling)
 - [Sending Messages / Reply's](#sending-messages-and-replys)
 - [Streamer / Chat information](#streamer-and-chat-information)
+- [Chat Moderation](#chat-moderation)
 - [Timed event functions](#timed-events)
 
 
@@ -36,8 +37,9 @@ Currently supports the following features. More may be added soon, and contribut
 - Message handling: Handle messages, looking to match the full message. i.e: ```'hello world'```
 - Sending messages: Have the bot send a message in chat
 - Replying to messages: Reply directly to a users previous message / command.
-- Timed events: Set a reoccurring event. i.e: Sending links to socials in chat every 30 minutes.
 - Access streamer and chat room information.
+- Chat Moderation: Get info on users, ban users, timeout users.
+- Timed events: Set a reoccurring event. i.e: Sending links to socials in chat every 30 minutes.
 
 ## Example
 
@@ -46,29 +48,34 @@ Currently supports the following features. More may be added soon, and contribut
 *Note*: For more examples, look in the [Examples Folder](/examples)
 ```python3
 from kickbot import KickBot, KickMessage
-from datetime import datetime, timedelta
-
-
-async def handle_hello_message(bot: KickBot, message: KickMessage):
-    content = message.content
-    sender_username = message.sender.username
-    chat_message = f"Hello {sender_username}. Got your message {content}"
-    await bot.send_text(chat_message)
-
-    
-async def handle_time_command(bot: KickBot, message: KickMessage):
-    time = datetime.utcnow()
-    reply = f"Current UTC Time: {time}"
-    await bot.reply_text(message, reply)
+from datetime import timedelta
 
     
 async def send_links_in_chat(bot: KickBot):
-    # NOTE: not all chats allow sending links (message won't go through)
-    # you can check bot.chatroom_settings.get('allow_link') to see. 
-    links = "Youtube: https://youtube.com\n\nKick: https://kick.com\n\nTwitch: https://kick.com"
+    """ Timed event to send social links every 30 mins """
+    links = "Youtube: https://youtube.com\n\nTwitch: https://twitch.tv"
     await bot.send_text(links)
-    
 
+
+async def time_following(bot: KickBot, message: KickMessage):
+    """ Reply with the amount of time the user has been following for """
+    sender_username = message.sender.username
+    viewer_info = bot.moderator.get_viewer_info(sender_username)
+    following_since = viewer_info.get('following_since')
+    if following_since is not None:
+        reply = f"You've been following since: {following_since}"
+    else:
+        reply = "Your not currently following this channel."
+    await bot.reply_text(message, reply)
+
+    
+async def ban_if_says_gay(bot: KickBot, message: KickMessage):
+    """ Ban user for 20 minutes if they say 'your gay' """
+    sender_username = message.sender.username
+    ban_time = 20
+    bot.moderator.timeout_user(sender_username, ban_time)
+
+    
 if __name__ == '__main__':
     USERBOT_EMAIL = "example@domain.com"
     USERBOT_PASS = "Password123"
@@ -77,15 +84,12 @@ if __name__ == '__main__':
     bot = KickBot(USERBOT_EMAIL, USERBOT_PASS)
     bot.set_streamer(STREAMER)
 
-    bot.add_message_handler('hello world', handle_hello_message)
-    bot.add_command_handler('!time', handle_time_command)
+    bot.add_command_handler('!following', time_following)
     bot.add_timed_event(timedelta(minutes=30), send_links_in_chat)
+    bot.add_message_handler('your gay', ban_if_says_gay)
     
     bot.poll()
 ```
-### Output
-![output](output.png)
-
 <br>
 
 ## Command and Message Handling
@@ -174,7 +178,7 @@ You can access information about the streamer, and chatroom via the ```bot.strea
 and ```bot.chatroom_settings``` dictionaries.
 
 
-Streamer Info: [Full Example]()
+Streamer Info: [Full Example](/examples/streamer_info_example.json)
 ```python
 streamer_name = bot.streamer_name
 follower_count = bot.streamer_info.get('followersCount')
@@ -195,6 +199,12 @@ is_antibot_mode = bot.chatroom_settings.get('anti_bot_mode')
 gifts_enabled = bot.chatroom_settings.get('gifts_enabled')
 ```
 
+Bot Settings: [Full Example](examples/bot_settings_example.json)
+```python
+is_mod = bot.bot_settings.get('is_moderator')
+is_admin = bot.bot_settings.get('is_admin')
+```
+
 
 #### Viewer Count
 
@@ -202,7 +212,54 @@ Access the current amount of viewers in the stream as an integer.
 ```python
 viewers = bot.current_viewers()
 ```
+<br>
 
+## Chat Moderation
+*Note*: You must add the bot user as a moderator to access these functions.
+
+All moderator functions are accessed using ```bot.moderator```
+
+
+
+### Viewer User Info
+
+```python
+viewer_info = bot.moderator.get_viewer_info('user_username')
+```
+
+#### Paramater
+```username``` type: ```str```
+
+#### Returns
+Dictionary containing viewer user info. [Full Example](examples/viewer_info_example.json)
+
+<br>
+
+### Timeout Ban
+```python
+bot.moderator.timeout_user('username', 20)
+```
+
+Ban a user for a certain amount of time.
+#### Paramaters
+```username``` type: ```str```: Username to be banned
+
+```minutes``` type: ```int```: Time in minutes to ban the user for
+
+#### Returns
+```None```
+
+<br>
+
+### Permaban
+```python
+bot.moderator.permaban('username')
+```
+Permanently ban a user.
+#### Paramater
+```username``` type: ```str```: Username to ban permanently
+#### Returns 
+```None```
 
 <br>
 

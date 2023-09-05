@@ -1,0 +1,15 @@
+{
+  "subscription": null,
+  "is_super_admin": false,
+  "is_following": true,
+  "following_since": "2023-09-04T21:45:49+00:00",
+  "is_broadcaster": false,
+  "is_moderator": true,
+  "leaderboards": {
+    "gifts": {
+      "quantity": 0
+    }
+  },
+  "banned": null,
+  "has_notifications": true
+}
