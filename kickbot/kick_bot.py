@@ -165,6 +165,19 @@ class KickBot:
         viewer_count = get_current_viewers(self)
         return viewer_count
 
+    @staticmethod
+    def set_log_level(log_level: str) -> None:
+        """
+        Set log level to your desired choice. By default, it is set to INFO.
+        Debug will show alot more, including all inbound messages
+        """
+        log_level = log_level.upper()
+        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        if log_level in valid_levels:
+            logger.setLevel(log_level)
+        else:
+            logger.warning(f"Invalid log level: {log_level}")
+
     ########################################################################################
     #    INTERNAL FUNCTIONS
     ########################################################################################
