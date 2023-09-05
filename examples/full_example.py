@@ -16,6 +16,17 @@ async def time_following(bot: KickBot, message: KickMessage):
     await bot.reply_text(message, reply)
 
 
+async def current_leaders(bot: KickBot, message: KickMessage):
+    """ Retrieve usernames of current leaders and send in chat"""
+    usernames = []
+    leaderboard = bot.moderator.get_leaderboard()
+    gift_leaders = leaderboard.get('gifts')
+    for user in gift_leaders:
+        usernames.append(user['username'])
+    leader_message = "Current Leaders: " + ", ".join(usernames)
+    await bot.send_text(leader_message)
+
+
 async def tell_a_joke(bot: KickBot, message: KickMessage):
     """ Reply with a random joke """
     url = "https://v2.jokeapi.dev/joke/Any?type=single"
@@ -44,6 +55,7 @@ async def send_links_in_chat(bot: KickBot):
 
 
 async def github_link(bot: KickBot, message: KickMessage):
+    """ Reply to '!github' command with link to github"""
     reply = "Github: 'https://github.com/lukemvc'"
     await bot.reply_text(message, reply)
 
@@ -57,6 +69,7 @@ if __name__ == '__main__':
     bot.set_streamer(STREAMER)
 
     bot.add_command_handler('!following', time_following)
+    bot.add_command_handler('!leaders', current_leaders)
     bot.add_command_handler('!joke', tell_a_joke)
     bot.add_command_handler('!time', current_time)
     bot.add_command_handler('!github', github_link)

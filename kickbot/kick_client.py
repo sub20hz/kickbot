@@ -2,6 +2,7 @@ import requests
 import logging
 import tls_client
 
+from typing import Optional
 from requests.cookies import RequestsCookieJar
 
 from .constants import BASE_HEADERS, KickAuthException
@@ -21,11 +22,11 @@ class KickClient:
             client_identifier="chrome_116",
             random_tls_extension_order=True
         )
-        self.xsrf: str | None = None
-        self.cookies: RequestsCookieJar | None = None
-        self.auth_token: str | None = None
-        self.user_data: dict[str, str | dict] | None = None
-        self.user_id: int | None = None
+        self.xsrf: Optional[str] = None
+        self.cookies: Optional[RequestsCookieJar] = None
+        self.auth_token: Optional[str] = None
+        self.user_data: Optional[dict] = None
+        self.user_id: Optional[int] = None
         self._login()
 
     def _login(self) -> None:

@@ -185,7 +185,7 @@ def ban_user(bot, username: str, minutes: int = 0, is_permanent: bool = False) -
     response = bot.client.scraper.post(url, json=payload, cookies=bot.client.cookies, headers=headers)
     if response.status_code != 200:
         logger.error(f"An error occurred when setting timeout for {username} | "
-                     f"Response Status: {response.status_code}")
+                     f"Status Code: {response.status_code}")
         return False
     return True
 
@@ -207,5 +207,20 @@ def get_viewer_info(bot, username: str) -> dict | None:
     response = bot.client.scraper.get(url, cookies=bot.client.cookies, headers=headers)
     if response.status_code != 200:
         logger.error(f"Error retrieving viewer info for {username} | Status code: {response.status_code}")
+        return None
+    return response.json()
+
+
+def get_streamer_leaderboard(bot) -> dict | None:
+    """
+    Retrieve the chat leaderboard
+
+    :param bot: main KickBot
+    :return: Dictionary containing leaderboard. Will return None and log error if it fails.
+    """
+    url = f"https://kick.com/api/v2/channels/{bot.streamer_slug}/leaderboards"
+    response = bot.client.scraper.get(url, cookies=bot.client.cookies, headers=BASE_HEADERS)
+    if response.status_code != 200:
+        logger.warning(f"An error occurred while retrieving leaderboard. Status Code: {response.status_code}")
         return None
     return response.json()

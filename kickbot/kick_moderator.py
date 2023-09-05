@@ -3,6 +3,7 @@ import logging
 from .kick_helper import (
     ban_user,
     get_viewer_info,
+    get_streamer_leaderboard
 )
 
 logger = logging.getLogger(__name__)
@@ -40,3 +41,12 @@ class Moderator:
         """
         if ban_user(self.bot, username, is_permanent=True):
             logger.info(f"Permanently banned user: {username}")
+
+    def get_leaderboard(self) -> dict | None:
+        """
+        Retrieve the current leaderboard for chat.
+
+        :returns: Dictionary containing chat leaderboard stats. Will return None and log error if it fails.
+        """
+        leaderboard = get_streamer_leaderboard(self.bot)
+        return leaderboard

@@ -1,0 +1,96 @@
+{
+  "gifts": [
+    {
+      "user_id": 698448,
+      "username": "BruceDropEmOff",
+      "quantity": 100
+    },
+    {
+      "user_id": 723,
+      "username": "Trainwreckstv",
+      "quantity": 100
+    },
+    {
+      "user_id": 3932939,
+      "username": "fousey",
+      "quantity": 100
+    },
+    {
+      "user_id": 904404,
+      "username": "AdinRoss",
+      "quantity": 100
+    },
+    {
+      "user_id": 22,
+      "username": "Eddie",
+      "quantity": 100
+    }
+  ],
+  "gifts_enabled": true,
+  "gifts_week": [
+    {
+      "user_id": 188471,
+      "username": "wniu",
+      "quantity": 11
+    },
+    {
+      "user_id": 911274,
+      "username": "NickGaravani",
+      "quantity": 10
+    },
+    {
+      "user_id": 148373,
+      "username": "SCHEME",
+      "quantity": 5
+    },
+    {
+      "user_id": 1060359,
+      "username": "Majinboof",
+      "quantity": 5
+    },
+    {
+      "user_id": 13419475,
+      "username": "Zeph_aniah",
+      "quantity": 5
+    },
+    {
+      "user_id": 18736661,
+      "username": "whoisizuki",
+      "quantity": 1
+    },
+    {
+      "user_id": 15109104,
+      "username": "Lildiccgurl666",
+      "quantity": 1
+    }
+  ],
+  "gifts_week_enabled": true,
+  "gifts_month": [
+    {
+      "user_id": 188471,
+      "username": "wniu",
+      "quantity": 11
+    },
+    {
+      "user_id": 911274,
+      "username": "NickGaravani",
+      "quantity": 10
+    },
+    {
+      "user_id": 2034797,
+      "username": "RicoDaVinci",
+      "quantity": 5
+    },
+    {
+      "user_id": 699318,
+      "username": "exspects",
+      "quantity": 5
+    },
+    {
+      "user_id": 7230486,
+      "username": "Sharis",
+      "quantity": 5
+    }
+  ],
+  "gifts_month_enabled": true
+}

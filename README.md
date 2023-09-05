@@ -52,17 +52,17 @@ Currently supports the following features. More may be added soon, and contribut
 from kickbot import KickBot, KickMessage
 from datetime import timedelta
 
-    
+
 async def send_links_in_chat(bot: KickBot):
-    """ Timed event to send social links every 30 mins """
-    links = "Youtube: https://youtube.com\n\nTwitch: https://twitch.tv"
-    await bot.send_text(links)
+""" Timed event to send social links every 30 mins """
+links = "Youtube: https://youtube.com\n\nTwitch: https://twitch.tv"
+await bot.send_text(links)
 
 
 async def time_following(bot: KickBot, message: KickMessage):
-    """ Reply to '!following' with the amount of time the user has been following for """
-    sender_username = message.sender.username
-    viewer_info = bot.moderator.get_viewer_info(sender_username)
+""" Reply to '!following' with the amount of time the user has been following for """
+sender_username = message.sender.username
+viewer_info = bot.moderator.get_viewer_info(sender_username)
     following_since = viewer_info.get('following_since')
     if following_since is not None:
         reply = f"You've been following since: {following_since}"
@@ -237,14 +237,13 @@ All moderator functions are accessed using ```bot.moderator```
 ```python
 viewer_info = bot.moderator.get_viewer_info('user_username')
 ```
-
-#### Paramater
+Retrieve information about a viewer.
+#### Paramaters:
 ```username``` type: ```str```
 
-#### Returns
+#### Returns:
 Dictionary containing viewer user info. [Full Example](examples/viewer_info_example.json)
 
-<br>
 
 ### Timeout Ban
 ```python
@@ -252,25 +251,33 @@ bot.moderator.timeout_user('username', 20)
 ```
 
 Ban a user for a certain amount of time.
-#### Paramaters
+#### Paramaters:
 ```username``` type: ```str```: Username to be banned
 
 ```minutes``` type: ```int```: Time in minutes to ban the user for
 
-#### Returns
+#### Returns:
 ```None```
-
-<br>
 
 ### Permaban
 ```python
 bot.moderator.permaban('username')
 ```
 Permanently ban a user.
-#### Paramater
+#### Parameters:
 ```username``` type: ```str```: Username to ban permanently
-#### Returns 
+#### Returns:
 ```None```
+
+### Leaderboard
+```python
+bot.moderator.get_leaderboard()
+```
+Retrieve the current chat leaderboard. 
+#### Parameters:
+```None```
+#### Returns:
+Dictionary containing current chat leaderboard users and stats. [Full Example](examples/leaderboard_example.json)
 
 <br>
 

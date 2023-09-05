@@ -5,7 +5,7 @@ import threading
 import websockets
 
 from datetime import timedelta
-from typing import Callable
+from typing import Callable, Optional
 
 from .constants import KickBotException
 from .kick_client import KickClient
@@ -32,17 +32,17 @@ class KickBot:
     def __init__(self, username: str, password: str) -> None:
         self.client: KickClient = KickClient(username, password)
         self._ws_uri = get_ws_uri()
-        self._socket_id: str | None = None
-        self.streamer_name: str | None = None
-        self.streamer_slug: str | None = None
-        self.streamer_info: dict | None = None
-        self.chatroom_info: dict | None = None
-        self.chatroom_settings: dict | None = None
-        self.bot_settings: dict | None = None
+        self._socket_id: Optional[str] = None
+        self.streamer_name: Optional[str] = None
+        self.streamer_slug: Optional[str] = None
+        self.streamer_info: Optional[dict] = None
+        self.chatroom_info: Optional[dict] = None
+        self.chatroom_settings: Optional[dict] = None
+        self.chatroom_id: Optional[int] = None
+        self.bot_settings: Optional[dict] = None
         self.is_mod: bool = False
         self.is_super_admin: bool = False
-        self.moderator: Moderator | None = None
-        self.chatroom_id: int | None = None
+        self.moderator: Optional[Moderator] = None
         self.handled_commands: dict[str, Callable] = {}
         self.handled_messages: dict[str, Callable] = {}
         self._is_active = True
@@ -81,8 +81,7 @@ class KickBot:
         """
         Add a message to be handled, and the asynchronous function to handle that message.
 
-        Message handler will call the function if the entire message content matches
-        Command handler will call the function if the first word matches
+        Message handler will call the function if the entire message content matches (case-insensitive)
 
         :param message: Message to be handled i.e: 'hello world'
         :param message_function: Async function to handle the message
@@ -98,8 +97,7 @@ class KickBot:
         """
         Add a command to be handled, and the asynchronous function to handle that command.
 
-        Command handler will call the function if the first word matches
-        Message handler will call the function if the entire message content matches
+        Command handler will call the function if the first word matches (case-insensitive)
 
         :param command: Command to be handled i.e: '!time'
         :param command_function: Async function to handle the command
