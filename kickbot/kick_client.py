@@ -18,7 +18,7 @@ class KickClient:
         self.username: str = username
         self.password: str = password
         self.scraper = tls_client.Session(
-            client_identifier="chrome116",
+            client_identifier="chrome_116",
             random_tls_extension_order=True
         )
         self.xsrf: str | None = None
